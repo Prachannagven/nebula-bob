@@ -46,3 +46,5 @@ Thumbs.db
 latexmkrc
 *.lmr
 
+.vscode
+.venv
