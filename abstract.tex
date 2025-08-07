@@ -1,0 +1,391 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{float}
+\usepackage{microtype}
+
+% Define colors
+\definecolor{nebulablue}{RGB}{25,118,210}
+\definecolor{nebulagray}{RGB}{97,97,97}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{14pt} % Adjust headheight to prevent fancyhdr warning
+\fancyhead[L]{\textcolor{nebulablue}{\textbf{Nebula Submission}}}
+\fancyhead[R]{\textcolor{nebulagray}{Technical Abstract}}
+\fancyfoot[C]{\thepage}
+
+% Title formatting
+\titleformat{\section}{\Large\bfseries\color{nebulablue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{nebulagray}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection}{1em}{}
+
+% Custom list environments
+\newlist{techlist}{itemize}{3}
+\setlist[techlist,1]{label=\textcolor{nebulablue}{$\bullet$}, leftmargin=1.5em}
+\setlist[techlist,2]{label=\textcolor{nebulagray}{$\circ$}, leftmargin=2em}
+\setlist[techlist,3]{label=$-$, leftmargin=2.5em}
+
+\begin{document}
+
+% Title Page
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\Huge\textcolor{nebulablue}{\textbf{Nebula Submission}}}
+    
+    \vspace{0.5cm}
+    {\Large\textcolor{nebulagray}{Implementation of Scalable GPU Interconnects}}
+    
+    \vspace{0.3cm}
+    {\large\textcolor{nebulagray}{with AXI/CHI Protocols \& Network-on-Chip Architecture}}
+    
+    \vspace{2cm}
+    
+    \begin{tabular}{c}
+        \textbf{\Large Technical Abstract} \\
+        \textit{Proposed Solution for Scalable AI Computing Infrastructure}
+    \end{tabular}
+    
+    \vspace{2cm}
+    
+    \begin{tabular}{ll}
+        \textbf{Project Category:} & Hardware/Software Co-Design \\
+        \textbf{Target Scale:} & 4-64 GPUs (2x2 to 8x8 grid configurations) \\
+        \textbf{Key Technologies:} & ARM AMBA AXI4/CHI, Network-on-Chip, SystemVerilog \\
+        \textbf{Implementation:} & RTL, SystemC TLM-2.0, Python Analysis Framework \\
+    \end{tabular}
+    
+    \vfill
+    
+    {\large August 2025}
+\end{titlepage}
+
+\newpage
+
+\section{Problem Statement and Motivation}
+
+Current GPU interconnect solutions face fundamental architectural limitations when scaling beyond 8-16 GPUs, creating critical bottlenecks for large-scale AI training and inference systems. Traditional PCIe-based connections exhibit \textbf{O(1) bandwidth scaling} characteristics, where aggregate bandwidth remains constant regardless of the number of GPUs, fundamentally limiting system performance. Point-to-point topologies fail to provide efficient routing for many-to-many communication patterns prevalent in modern AI workloads, while memory coherency protocols between GPUs require extensive software management, introducing significant latency overhead.
+
+The growing demand for larger AI models necessitates distributed training across 32+ GPUs, yet existing interconnect solutions cannot efficiently support such scales. Software-managed coherency protocols add 100-1000+ cycle overhead for inter-GPU memory operations, while PCIe fabric contention creates unpredictable latency characteristics that severely impact training convergence times.
+
+\textbf{Our objective} is to develop a standardized, hardware-based interconnect solution that achieves \textbf{O(N) bandwidth scaling} with the number of GPUs while maintaining full protocol compatibility with existing GPU architectures and providing deterministic, low-latency communication guarantees.
+
+\section{Technical Approach: Nebula Submission}
+
+\subsection{System Architecture Overview}
+
+We propose a hierarchical interconnect system implementing ARM AMBA AXI4 and CHI protocols over a 2D mesh Network-on-Chip topology. Our solution consists of four integrated components providing seamless GPU-to-GPU communication with hardware-managed cache coherency.
+
+\begin{figure}[H]
+    \centering
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        \textbf{GPU 0,0} & \textbf{GPU 1,0} & \textbf{GPU 2,0} & \textbf{GPU 3,0} \\
+        \hline
+        \textbf{GPU 0,1} & \textbf{GPU 1,1} & \textbf{GPU 2,1} & \textbf{GPU 3,1} \\
+        \hline
+        \textbf{GPU 0,2} & \textbf{GPU 1,2} & \textbf{GPU 2,2} & \textbf{GPU 3,2} \\
+        \hline
+        \textbf{GPU 0,3} & \textbf{GPU 1,3} & \textbf{GPU 2,3} & \textbf{GPU 3,3} \\
+        \hline
+    \end{tabular}
+    \caption{Example 4x4 Nebula Submission Grid Topology (16 GPUs)}
+\end{figure}
+
+\subsection{Component 1: AXI4/CHI Protocol Implementation}
+
+\subsubsection{AXI4 Interface State Machine Design}
+We implement sophisticated finite state machines managing five independent channels (AW, W, B, AR, R) with comprehensive transaction tracking:
+
+\begin{techlist}
+    \item \textbf{Outstanding Transaction Management}: Hardware tables tracking up to 16 concurrent transactions per interface with transaction ID mapping and completion ordering
+    \item \textbf{Burst Transaction Optimization}: Support for 256-beat transactions with WRAP, INCR, and FIXED burst types, including boundary protection logic
+    \item \textbf{Wide Data Path Implementation}: 512-bit data paths structured as 8×64-bit lanes with sophisticated byte-enable generation and data steering
+    \item \textbf{Advanced Flow Control}: Credit-based back-pressure management with configurable thresholds and adaptive rate control
+\end{techlist}
+
+\subsubsection{CHI Coherency Engine Architecture}
+Our CHI implementation provides hardware-managed cache coherency through three distinct processing engines:
+
+\begin{techlist}
+    \item \textbf{Request Node (RN) Engine}: Manages cache line requests, implements snoop filtering, and handles coherency state transitions with atomic updates
+    \item \textbf{Home Node (HN) Engine}: Acts as memory controller interface with distributed directory maintenance and transaction serialization
+    \item \textbf{Snoop Filter Logic}: Hardware-based directory tracking cache line ownership across all grid nodes, enabling efficient invalidation broadcasts
+    \item \textbf{Five-State Protocol}: Complete implementation of I, UC, UD, SC, SD coherency states with race condition prevention through message ordering
+\end{techlist}
+
+\subsection{Component 2: Network-on-Chip Router Microarchitecture}
+
+\subsubsection{Five-Stage Router Pipeline}
+Each router implements a sophisticated pipeline architecture optimized for low latency and high throughput:
+
+\begin{enumerate}
+    \item \textbf{Buffer Write (BW)}: Flit validation, error detection, and virtual channel allocation with conflict resolution
+    \item \textbf{Route Computation (RC)}: XY routing algorithm implementation with adaptive routing extensions and lookahead computation
+    \item \textbf{Virtual Channel Allocation (VA)}: Downstream VC allocation with deadlock prevention and priority management
+    \item \textbf{Switch Allocation (SA)}: Crossbar arbitration using round-robin and priority schemes with starvation prevention
+    \item \textbf{Switch Traversal (ST)}: Physical transmission with credit generation and comprehensive error monitoring
+\end{enumerate}
+
+\subsubsection{Advanced Buffer Architecture}
+Input buffering implements sophisticated virtual channel management:
+
+\begin{techlist}
+    \item \textbf{Multi-Level Buffering}: 16-flit deep buffers per virtual channel (4 VCs per port) with shared buffer pool optimization
+    \item \textbf{State Machine Management}: Four-state VC management (Idle, Routing, Active, Waiting) with transition optimization
+    \item \textbf{Credit-Based Flow Control}: Separate credit counters per VC with adaptive back-pressure mechanisms
+    \item \textbf{Congestion Monitoring}: Real-time buffer occupancy tracking for adaptive routing feedback and load balancing
+\end{techlist}
+
+\subsubsection{Routing Algorithm Implementation}
+Our routing implementation provides deadlock-free operation with performance optimization:
+
+\begin{techlist}
+    \item \textbf{XY Routing Core}: Coordinate comparison logic with mathematical deadlock freedom proof through dimensional ordering
+    \item \textbf{Adaptive Extensions}: Congestion monitoring with alternative path computation maintaining deadlock freedom
+    \item \textbf{Load Balancing}: Weighted path selection algorithms with hotspot detection and mitigation
+    \item \textbf{Virtual Channel Ordering}: Dependency tracking preventing cyclic wait conditions across message classes
+\end{techlist}
+
+\subsection{Component 3: Network Interface Protocol Translation}
+
+\subsubsection{AXI-to-NoC Translation Engine}
+Seamless protocol conversion between burst-oriented AXI and packet-switched NoC:
+
+\begin{techlist}
+    \item \textbf{Transaction Decomposition}: Intelligent segmentation of 256-beat AXI bursts into optimal NoC packet sizes
+    \item \textbf{State Tracking}: Hardware tables managing up to 64 outstanding operations with aging mechanisms and timeout detection
+    \item \textbf{Address Mapping}: Configurable translation from AXI addresses to NoC destination coordinates with load balancing
+    \item \textbf{Packet Assembly}: Header generation, payload optimization, and end-to-end error detection code insertion
+\end{techlist}
+
+\subsubsection{CHI-to-NoC Protocol Mapping}
+Coherency protocol preservation across packet-switched infrastructure:
+
+\begin{techlist}
+    \item \textbf{Message Classification}: CHI request/response/data messages mapped to appropriate NoC virtual channels with priority assignment
+    \item \textbf{Coherency State Management}: Distributed state tracking across packet-switched network with snoop traffic optimization
+    \item \textbf{Cache Line Optimization}: 64-byte cache line segmentation with integrity checksums and reconstruction logic
+    \item \textbf{Ordering Preservation}: CHI completion semantics maintained through NoC packet sequencing and dependency tracking
+\end{techlist}
+
+\subsection{Component 4: System Integration Architecture}
+
+\subsubsection{Hierarchical Addressing Scheme}
+Scalable address space management supporting up to 8×8 grid configurations:
+
+\begin{techlist}
+    \item \textbf{Global Address Space}: Partitioned addressing with dedicated ranges per GPU and automatic address translation
+    \item \textbf{Route Computation}: Hardware logic extracting routing information directly from memory addresses
+    \item \textbf{Collective Operations}: Broadcast/multicast support with special addressing modes for AI training primitives
+    \item \textbf{Memory Consistency}: Hardware-enforced ordering guarantees across distributed memory hierarchy
+\end{techlist}
+
+\subsubsection{Performance Optimization Mechanisms}
+Comprehensive optimization framework for AI workload characteristics:
+
+\begin{techlist}
+    \item \textbf{Adaptive Routing}: Real-time congestion monitoring with dynamic path selection and load balancing
+    \item \textbf{Quality of Service}: Traffic classification and priority queuing with bandwidth allocation guarantees
+    \item \textbf{Transaction Optimization}: Request combining, response batching, and predictive prefetching
+    \item \textbf{Virtual Channel Management}: Traffic class separation preventing head-of-line blocking
+\end{techlist}
+
+\section{Implementation Methodology}
+
+\subsection{Hardware Implementation Strategy}
+
+\subsubsection{SystemVerilog RTL Design}
+Complete synthesizable implementation following industry standards:
+
+\begin{techlist}
+    \item \textbf{IEEE 1800-2017 Compliance}: Synthesizable RTL using proper coding guidelines and non-blocking assignments
+    \item \textbf{Clock Domain Strategy}: Single global clock domain with synchronous reset and planned multi-clock support
+    \item \textbf{Protocol Verification}: Comprehensive SystemVerilog assertions for AXI4 and CHI compliance checking
+    \item \textbf{Parameterization}: Configurable grid dimensions, buffer sizes, and data widths for scalability
+\end{techlist}
+
+\subsubsection{Module Hierarchy}
+Modular design enabling independent development and verification:
+
+\begin{verbatim}
+gpu_grid_top
+|-- axi4_master (per GPU connection)
+|-- axi4_slave (per GPU connection)
+|-- chi_request_node (per GPU)
+|-- chi_home_node (per memory controller)
+|-- noc_router (per grid position)
+|-- network_interface (AXI/CHI to NoC)
+`-- grid_interconnect (top-level mesh)
+\end{verbatim}
+
+\subsection{System-Level Modeling}
+
+\subsubsection{SystemC TLM-2.0 Implementation}
+High-level system exploration and performance analysis:
+
+\begin{techlist}
+    \item \textbf{Transaction-Level Models}: Blocking transport interfaces with accurate timing annotation using \texttt{sc\_time}
+    \item \textbf{Abstraction Levels}: Support for functional, cycle-approximate, and cycle-accurate modeling
+    \item \textbf{Performance Modeling}: Router delays, serialization effects, and protocol overhead characterization
+    \item \textbf{Parameterization}: Template-based grid dimensions and runtime configuration support
+\end{techlist}
+
+\subsection{Comprehensive Verification Framework}
+
+\subsubsection{Multi-Level Verification Strategy}
+Ensuring functional correctness and protocol compliance:
+
+\begin{techlist}
+    \item \textbf{Protocol Compliance}: AXI4 and CHI protocol checkers with formal verification for critical properties
+    \item \textbf{UVM Testbenches}: Constrained random verification with functional coverage tracking
+    \item \textbf{Deadlock Detection}: Runtime monitoring for circular wait conditions and livelock prevention
+    \item \textbf{FPGA Emulation}: Extended verification on hardware platforms for realistic scenarios
+\end{techlist}
+
+\subsubsection{Performance Validation}
+Comprehensive performance characterization and optimization:
+
+\begin{techlist}
+    \item \textbf{Synthetic Workloads}: Traffic generators supporting uniform random, hotspot, and nearest-neighbor patterns
+    \item \textbf{AI Training Traces}: Realistic GPU communication patterns from neural network training workloads
+    \item \textbf{Scalability Analysis}: Automated testing across all grid configurations with bottleneck identification
+    \item \textbf{Comparative Evaluation}: Performance comparison with PCIe-based baseline implementations
+\end{techlist}
+
+\section{Performance Analysis Infrastructure}
+
+\subsection{Simulation and Modeling Framework}
+
+\subsubsection{Build System Integration}
+Coordinated development and testing infrastructure:
+
+\begin{techlist}
+    \item \textbf{Makefile Automation}: Integrated SystemVerilog and SystemC compilation with dependency management
+    \item \textbf{Simulator Support}: Verilator for fast simulation, ModelSim/VCS for full-featured debugging
+    \item \textbf{Continuous Integration}: Automated regression testing with performance monitoring
+    \item \textbf{Configuration Management}: Parameter sweeps and design space exploration automation
+\end{techlist}
+
+\subsubsection{Advanced Metrics Collection}
+Comprehensive performance monitoring and analysis:
+
+\begin{techlist}
+    \item \textbf{Latency Measurement}: Cycle-accurate timing with timestamp injection and extraction
+    \item \textbf{Bandwidth Analysis}: Per-link, per-router, and per-virtual-channel utilization tracking
+    \item \textbf{Congestion Monitoring}: Buffer occupancy histograms and hotspot identification
+    \item \textbf{QoS Metrics}: Traffic class performance tracking and service level validation
+\end{techlist}
+
+\subsection{Analysis and Visualization Tools}
+
+\subsubsection{Python Analysis Framework}
+Automated performance analysis and report generation:
+
+\begin{techlist}
+    \item \textbf{Data Processing}: Pandas-based statistical analysis with automated metric calculation
+    \item \textbf{Visualization}: Matplotlib/Seaborn integration for publication-quality figures
+    \item \textbf{Network Analysis}: NetworkX-based topology visualization and communication pattern analysis
+    \item \textbf{Scalability Curves}: Automated generation of performance scaling characteristics
+\end{techlist}
+
+\section{Expected Deliverables and Impact}
+
+\subsection{Technical Deliverables}
+
+\subsubsection{Hardware Implementation}
+Complete RTL implementation targeting FPGA prototyping:
+
+\begin{techlist}
+    \item \textbf{SystemVerilog RTL}: Synthesizable designs for all AXI4/CHI interfaces and NoC components
+    \item \textbf{Parameterizable Modules}: Support for 2×2 to 8×8 grid configurations with runtime optimization
+    \item \textbf{Protocol Compliance}: Comprehensive testbenches with verified AXI4 and CHI specification compliance
+    \item \textbf{FPGA Targets}: Synthesized implementations for Xilinx and Intel FPGA platforms
+\end{techlist}
+
+\subsubsection{System Models and Analysis}
+High-level modeling and performance analysis framework:
+
+\begin{techlist}
+    \item \textbf{SystemC Models}: TLM-2.0 implementations for rapid system-level exploration
+    \item \textbf{Python Framework}: Comprehensive simulation and analysis infrastructure
+    \item \textbf{Configuration Support}: Topology and traffic pattern configuration management
+    \item \textbf{Build Infrastructure}: Automated compilation, testing, and analysis workflows
+\end{techlist}
+
+\subsection{Performance Validation Results}
+
+\subsubsection{Functional Verification}
+Demonstrated protocol compliance and system correctness:
+
+\begin{techlist}
+    \item \textbf{Protocol Verification}: AXI4 and CHI specification compliance with formal verification
+    \item \textbf{Deadlock Freedom}: Mathematical proof and runtime verification of deadlock-free operation
+    \item \textbf{Coherency Validation}: Hardware-managed cache coherency correctness across all grid configurations
+    \item \textbf{Error Handling}: Fault tolerance and graceful degradation under failure scenarios
+\end{techlist}
+
+\subsubsection{Performance Characterization}
+Comprehensive performance analysis and optimization results:
+
+\begin{techlist}
+    \item \textbf{Scaling Analysis}: Performance characterization across 2×2 to 8×8 grid configurations
+    \item \textbf{Latency Optimization}: Cycle-accurate latency analysis with optimization recommendations
+    \item \textbf{Bandwidth Efficiency}: Throughput analysis demonstrating O(N) bandwidth scaling
+    \item \textbf{Comparative Evaluation}: Performance advantages over traditional PCIe-based interconnects
+\end{techlist}
+
+\section{Innovation and Industry Impact}
+
+\subsection{Technical Contributions}
+
+\begin{techlist}
+    \item \textbf{First Comprehensive Implementation}: Complete AXI4/CHI protocol implementation over mesh NoC for GPU interconnects
+    \item \textbf{Novel Network Interface Design}: Seamless protocol translation with minimal latency overhead and maximum throughput
+    \item \textbf{Scalable Router Architecture}: Advanced microarchitecture supporting 64+ GPUs with deterministic performance
+    \item \textbf{Hardware-Managed Coherency}: Elimination of software coherency overhead in GPU-to-GPU communication
+\end{techlist}
+
+\subsection{Performance Improvements}
+
+\begin{techlist}
+    \item \textbf{Bandwidth Scalability}: O(N) bandwidth scaling vs. O(1) for PCIe-based solutions
+    \item \textbf{Latency Reduction}: Direct mesh communication eliminating CPU bottlenecks and software overhead
+    \item \textbf{Deterministic Performance}: Predictable communication characteristics enabling optimized AI training
+    \item \textbf{Fault Tolerance}: Redundant path support with graceful degradation capabilities
+\end{techlist}
+
+\subsection{Industry Relevance and Adoption}
+
+\begin{techlist}
+    \item \textbf{Standards Compliance}: ARM AMBA protocol compatibility ensuring ecosystem integration
+    \item \textbf{Vendor Agnostic}: Modular design supporting different GPU vendors and memory hierarchies
+    \item \textbf{FPGA Prototyping}: Hardware validation pathway enabling real-world demonstration
+    \item \textbf{Open Source Delivery}: Community-driven development and research collaboration
+\end{techlist}
+
+\section{Conclusion}
+
+The Nebula Submission represents a comprehensive solution to the fundamental scalability limitations of current GPU interconnect architectures. Through the innovative combination of ARM AMBA AXI4/CHI protocols with advanced Network-on-Chip technology, we deliver a hardware-based interconnect solution capable of efficiently scaling to 32+ GPUs while maintaining full protocol compatibility.
+
+Our approach addresses critical bottlenecks in current AI training infrastructure by providing O(N) bandwidth scaling, hardware-managed cache coherency, and deterministic low-latency communication. The comprehensive implementation spans RTL-level hardware design through system-level modeling and analysis, ensuring both functional correctness and performance optimization.
+
+The expected impact includes enabling larger-scale AI training systems, reducing training times through improved communication efficiency, and providing a standards-compliant foundation for next-generation GPU computing architectures. The modular, parameterizable design ensures adaptability to different system configurations and vendor ecosystems, promoting widespread adoption and further research collaboration.
+
+This project establishes a new paradigm for scalable GPU interconnects, moving beyond the limitations of traditional PCIe-based solutions toward a future of efficient, hardware-managed, mesh-based computing architectures specifically optimized for AI workload characteristics.
+
+\end{document}
