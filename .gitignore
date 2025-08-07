@@ -1,50 +1,66 @@
-# LaTeX intermediate and auxiliary files
-*.aux
-*.bbl
-*.blg
-*.brf
-*.fls
-*.fdb_latexmk
-*.glo
-*.gls
-*.idx
-*.ilg
-*.ind
-*.lof
-*.log
-*.lot
-*.lol
-*.nav
-*.out
-*.snm
-*.synctex.gz
-*.toc
-*.acn
-*.acr
-*.alg
-*.glg
-*.glsdefs
-*.dvi
-*.xdv
+# Build artifacts
+build/
+simulation/results/
+simulation/logs/
 
-# Bibliography backup files
-*~.bib
-*.bak
-*.bkp
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv
+env/
+ENV/
+.pytest_cache/
 
-# Output files
-*.pdf
-*.ps
+# C++
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
 
-# Editor and OS-specific
+# SystemC
+*.dat
+*.vcd
+*.wlf
+
+# Verilog
+*.vcd
+*.vpd
+*.shm/
+*.dsn
+*.trn
+*.fst
+*.ghw
+
+# IDE
+.vscode/
+.idea/
 *.swp
 *.swo
-*.DS_Store
+*~
+
+# OS
+.DS_Store
 Thumbs.db
 
-# Latexmk
-latexmkrc
-*.lmr
+# Documentation
+docs/html/
+docs/latex/
 
-.vscode
-.venv
+# Temporary files
+*.tmp
+*.bak
+*.orig
+
+# Latex
+*.aux
+*.log
+*.out
+
+# Misc
+.github
