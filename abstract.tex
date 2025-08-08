@@ -70,6 +70,8 @@
         \textbf{Implementation:} & RTL, SystemC TLM-2.0, Python Analysis Framework \\
     \end{tabular}
 	\vspace{2cm}
+
+
 	{\large \textbf{Team Name: } Team Bob} \\
 	\vspace{1cm}
 
@@ -97,16 +99,16 @@ The growing demand for larger AI models necessitates distributed training across
 \subsection{System Architecture Overview}
 
 \subsection*{Overview}
-This section provides a step-by-step breakdown of the Nebula system architecture, from the highest-level system view down to the hardware modules and logic that enable scalable, high-performance GPU interconnects. The goal is to make the design and implementation process clear for engineers with a basic understanding of RAM, memory, and CPU concepts. Figure \ref{fig:top architecture} shows a rough layout of what will further be discussed in this abstract.
+This section provides a step-by-step breakdown of the system architecture, from the highest-level system view down to the hardware modules and logic that enable scalable, high-performance GPU interconnects. The goal is to make the design and implementation process clear for engineers with a basic understanding of RAM, memory, and CPU concepts. Figure \ref{fig:top architecture} shows a rough layout of what will further be discussed in this abstract.
 \begin{figure}[h!]
 	\centering
-	\includegraphics[width=0.35\linewidth]{images/component-architecture.png}
+	\includegraphics[width=0.45\linewidth]{images/component-architecture.png}
 	\caption{Top Level Architecture of the Various Components}
 	\label{fig:top architecture}
 \end{figure}
 
 \subsubsection{Top-Level System Organization}
-At the highest level, Nebula is a hardware platform that connects multiple GPUs and memory controllers together to form a single, unified computing system. The system is organized as a grid (2D mesh) of GPUs, with each GPU able to communicate directly with any other GPU or memory controller in the grid. The system is designed to scale from 4 GPUs (2x2) up to 64 GPUs (8x8), with the ability to add or remove GPUs by changing configuration parameters.
+At the highest level, this architecture is a hardware platform that connects multiple GPUs and memory controllers together to form a single, unified computing system. The system is organized as a grid (2D mesh) of GPUs, with each GPU able to communicate directly with any other GPU or memory controller in the grid. The system is designed to scale from 4 GPUs (2x2) up to 64 GPUs (8x8), with the ability to add or remove GPUs by changing configuration parameters.
 
 \textbf{Key Components:}
 \begin{itemize}
@@ -221,7 +223,7 @@ All components (routers, network interfaces, protocol bridges) are implemented a
 \subsection{Component 1: AXI4/CHI Protocol Implementation}
 
 \subsection*{Overview}
-This section describes the practical implementation of the AXI4 and CHI protocol interfaces, which are responsible for enabling high-throughput, low-latency, and cache-coherent communication between GPUs and memory controllers in the Nebula NoC. The goal is to provide hardware-managed transaction tracking, burst handling, and coherency state management, ensuring protocol compliance and scalability for large GPU grids. The following subsections detail the design and step-by-step implementation of the AXI4 interface state machines and the CHI coherency engine.
+This section describes the practical implementation of the AXI4 and CHI protocol interfaces, which are responsible for enabling high-throughput, low-latency, and cache-coherent communication between GPUs and memory controllers in the NoC. The goal is to provide hardware-managed transaction tracking, burst handling, and coherency state management, ensuring protocol compliance and scalability for large GPU grids. The following subsections detail the design and step-by-step implementation of the AXI4 interface state machines and the CHI coherency engine.
 
 \subsubsection{AXI4 Interface State Machine Design}
 
@@ -313,7 +315,7 @@ The CHI (Coherent Hub Interface) engine is responsible for hardware-managed cach
 \subsection{Component 2: Network-on-Chip Router Microarchitecture}
 
 \subsection*{Overview}
-This section details the practical implementation of the Network-on-Chip (NoC) router microarchitecture, which is central to achieving scalable, low-latency, and deadlock-free communication between GPUs in the Nebula system. The router is designed as a highly parameterized SystemVerilog module, supporting flexible grid sizes, buffer depths, and virtual channel (VC) counts. The following subsections describe the five-stage pipeline, buffer architecture, and routing algorithms, with explicit implementation steps and design choices.
+This section details the practical implementation of the Network-on-Chip (NoC) router microarchitecture, which is central to achieving scalable, low-latency, and deadlock-free communication between GPUs in the system. The router is designed as a highly parameterized SystemVerilog module, supporting flexible grid sizes, buffer depths, and virtual channel (VC) counts. The following subsections describe the five-stage pipeline, buffer architecture, and routing algorithms, with explicit implementation steps and design choices.
 
 \subsubsection{Five-Stage Router Pipeline}
 
