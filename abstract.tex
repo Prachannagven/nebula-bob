@@ -1,4 +1,5 @@
 \documentclass[11pt,a4paper]{article}
+
 \usepackage[utf8]{inputenc}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amsfonts,amssymb}
@@ -68,6 +69,12 @@
         \textbf{Key Technologies:} & ARM AMBA AXI4/CHI, Network-on-Chip, SystemVerilog \\
         \textbf{Implementation:} & RTL, SystemC TLM-2.0, Python Analysis Framework \\
     \end{tabular}
+	\vspace{2cm}
+	{\large \textbf{Team Name: } Team Bob} \\
+	\vspace{1cm}
+	{\large \textbf{Team Members: } Pranav Chandra \\ Pramit Pal \\ Meghadri Ghosh}
+
+	
     
     \vfill
     
@@ -89,7 +96,13 @@ The growing demand for larger AI models necessitates distributed training across
 \subsection{System Architecture Overview}
 
 \subsection*{Overview}
-This section provides a step-by-step breakdown of the Nebula system architecture, from the highest-level system view down to the hardware modules and logic that enable scalable, high-performance GPU interconnects. The goal is to make the design and implementation process clear for engineers with a basic understanding of RAM, memory, and CPU concepts.
+This section provides a step-by-step breakdown of the Nebula system architecture, from the highest-level system view down to the hardware modules and logic that enable scalable, high-performance GPU interconnects. The goal is to make the design and implementation process clear for engineers with a basic understanding of RAM, memory, and CPU concepts. Figure \ref{fig:top architecture} shows a rough layout of what will further be discussed in this abstract.
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.35\linewidth]{images/component-architecture.png}
+	\caption{Top Level Architecture of the Various Components}
+	\label{fig:top architecture}
+\end{figure}
 
 \subsubsection{Top-Level System Organization}
 At the highest level, Nebula is a hardware platform that connects multiple GPUs and memory controllers together to form a single, unified computing system. The system is organized as a grid (2D mesh) of GPUs, with each GPU able to communicate directly with any other GPU or memory controller in the grid. The system is designed to scale from 4 GPUs (2x2) up to 64 GPUs (8x8), with the ability to add or remove GPUs by changing configuration parameters.
@@ -104,7 +117,14 @@ At the highest level, Nebula is a hardware platform that connects multiple GPUs 
 \end{itemize}
 
 \subsubsection{Grid and Mesh Topology}
-The GPUs and memory controllers are arranged in a 2D grid. Each GPU is connected to a router, and each router is connected to its neighboring routers (north, south, east, west) via NoC links. This forms a mesh topology, where data can travel from any GPU to any other by hopping through intermediate routers.
+The GPUs and memory controllers are arranged in a 2D grid. Each GPU is connected to a router, and each router is connected to its neighboring routers (north, south, east, west) via NoC links. This forms a mesh topology, where data can travel from any GPU to any other by hopping through intermediate routers. Figure \ref{fig:router topology} demonstrates the NOC packet communication between routers. 
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.75\linewidth]{images/inter-router-comms.png}
+	\caption{Example of interconnect between routers}
+	\label{fig:router topology}
+\end{figure}
 
 \textbf{Implementation Steps:}
 \begin{itemize}
@@ -575,5 +595,6 @@ The system includes a comprehensive set of hardware mechanisms to optimize perfo
         \item Debug interfaces allow inspection of routing tables, QoS schedulers, and transaction optimizers for verification and tuning.
     \end{itemize}
 \end{itemize}
-
+	hello world!
+	
 \end{document}
