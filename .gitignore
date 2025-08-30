@@ -49,3 +49,26 @@ latexmkrc
 .github
 .venv
 
+# Hardware simulation and synthesis files
+*.vcd
+*.fsdb
+*.shm
+*.trn
+*.dsn
+*.svf
+work/
+transcript
+vsim.wlf
+*.wlf
+
+# SystemVerilog and Verilog files
+*.ver
+*.vlg
+obj_dir/
+
+# Build and output directories
+build/
+sim/
+synth/
+impl/
+
