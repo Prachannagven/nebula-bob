@@ -90,6 +90,11 @@ package nebula_pkg;
   parameter int AXI_DATA_WIDTH = 512;  // 512-bit for GPU bandwidth
   parameter int AXI_STRB_WIDTH = AXI_DATA_WIDTH/8;
   parameter int AXI_MAX_BURST_LEN = 256;
+  parameter int AXI_AWUSER_WIDTH = 8;
+  parameter int AXI_WUSER_WIDTH = 8;
+  parameter int AXI_BUSER_WIDTH = 8;
+  parameter int AXI_ARUSER_WIDTH = 8;
+  parameter int AXI_RUSER_WIDTH = 8;
   
   // CHI parameters
   parameter int CHI_NODE_ID_WIDTH = 6;    // 64 nodes max
@@ -97,6 +102,146 @@ package nebula_pkg;
   parameter int CHI_DATA_WIDTH = 512;     // Cache line width
   parameter int CHI_BE_WIDTH = CHI_DATA_WIDTH/8;
   parameter int CHI_CACHE_LINE_SIZE = 64; // 64-byte cache lines
+  parameter int CHI_TXN_ID_WIDTH = 8;     // Transaction ID width
+  parameter int CHI_DBID_WIDTH = 8;       // Data buffer ID width
+  parameter int CHI_RSVDC_WIDTH = 4;      // Reserved field width
+
+  // =============================================================================
+  // CHI PROTOCOL DEFINITIONS
+  // =============================================================================
+  
+  // CHI Cache States (MOESI + others)
+  typedef enum logic [2:0] {
+    CHI_INVALID     = 3'b000,  // I - Invalid
+    CHI_UNIQUE_CLEAN = 3'b001, // UC - Unique Clean  
+    CHI_UNIQUE_DIRTY = 3'b010, // UD - Unique Dirty
+    CHI_SHARED_CLEAN = 3'b011, // SC - Shared Clean
+    CHI_SHARED_DIRTY = 3'b100, // SD - Shared Dirty  
+    CHI_EXCLUSIVE   = 3'b101,  // E - Exclusive
+    CHI_MODIFIED    = 3'b110,  // M - Modified
+    CHI_OWNED       = 3'b111   // O - Owned
+  } chi_cache_state_e;
+
+  // CHI Request Opcodes
+  typedef enum logic [5:0] {
+    // Read transactions
+    CHI_READSHARED     = 6'h01,
+    CHI_READCLEAN      = 6'h02, 
+    CHI_READONCE       = 6'h03,
+    CHI_READNOSNP      = 6'h04,
+    CHI_READUNIQUE     = 6'h07,
+    
+    // Write transactions
+    CHI_WRITENOSNPPTL  = 6'h18,
+    CHI_WRITENOSNPFULL = 6'h19,
+    CHI_WRITEUNIQUEPTL = 6'h1A,
+    CHI_WRITEUNIQUEFULL= 6'h1B,
+    CHI_WRITECLEANFULL = 6'h1C,
+    CHI_WRITEBACKFULL  = 6'h1D,
+    CHI_WRITEBACKPTL   = 6'h1E,
+    CHI_WRITEVICTIMFULL= 6'h1F,
+    
+    // Coherent transactions
+    CHI_CLEANSHARED    = 6'h20,
+    CHI_CLEANINVALID   = 6'h21,
+    CHI_MAKEINVALID    = 6'h22,
+    CHI_CLEANUNIQUE    = 6'h23,
+    
+    // Snoop transactions  
+    CHI_SNPSHARED      = 6'h30,
+    CHI_SNPCLEAN       = 6'h31,
+    CHI_SNPONCE        = 6'h32,
+    CHI_SNPUNIQUE      = 6'h33
+  } chi_opcode_e;
+
+  // CHI Response Opcodes
+  typedef enum logic [4:0] {
+    CHI_COMP           = 5'h00,  // Completion
+    CHI_COMPDBIDRESP   = 5'h01,  // Completion with DBID
+    CHI_DBIDRESP       = 5'h02,  // DBID Response
+    CHI_READRECEIPT    = 5'h03,  // Read Receipt
+    CHI_SNPRESP        = 5'h04,  // Snoop Response
+    CHI_COMPDATA       = 5'h05,  // Completion with Data
+    CHI_SNPRESPDATA    = 5'h06,  // Snoop Response with Data
+    CHI_DATALESS       = 5'h07   // Dataless Response
+  } chi_resp_opcode_e;
+
+  // CHI Response Error Codes
+  typedef enum logic [1:0] {
+    CHI_OKAY           = 2'b00,  // Normal completion
+    CHI_EXOKAY         = 2'b01,  // Exclusive completion  
+    CHI_SLVERR         = 2'b10,  // Slave error
+    CHI_DECERR         = 2'b11   // Decode error
+  } chi_resp_err_e;
+
+  // =============================================================================
+  // CHI MESSAGE STRUCTURES
+  // =============================================================================
+
+  // CHI Request Channel Structure
+  typedef struct packed {
+    logic [CHI_TXN_ID_WIDTH-1:0]    txn_id;      // Transaction ID
+    logic [CHI_NODE_ID_WIDTH-1:0]   src_id;      // Source node ID  
+    logic [CHI_NODE_ID_WIDTH-1:0]   tgt_id;      // Target node ID
+    logic [CHI_REQ_ADDR_WIDTH-1:0]  addr;        // Address
+    chi_opcode_e                    opcode;      // Request opcode
+    logic [2:0]                     size;        // Transfer size (2^size bytes)
+    logic [CHI_RSVDC_WIDTH-1:0]     rsvdc;       // Reserved field
+    logic                           likely_shared; // Cache line likely shared
+    logic                           allow_retry; // Allow retry responses
+    logic [QOS_WIDTH-1:0]           qos;         // Quality of Service
+  } chi_req_t;
+
+  // CHI Response Channel Structure  
+  typedef struct packed {
+    logic [CHI_TXN_ID_WIDTH-1:0]    txn_id;      // Transaction ID
+    logic [CHI_NODE_ID_WIDTH-1:0]   src_id;      // Source node ID
+    logic [CHI_NODE_ID_WIDTH-1:0]   tgt_id;      // Target node ID
+    chi_resp_opcode_e               opcode;      // Response opcode
+    chi_resp_err_e                  resp_err;    // Response error
+    logic [CHI_DBID_WIDTH-1:0]      dbid;        // Data buffer ID
+    logic [2:0]                     fwd_state;   // Forwarded cache state
+    logic [CHI_RSVDC_WIDTH-1:0]     rsvdc;       // Reserved field
+    logic [QOS_WIDTH-1:0]           qos;         // Quality of Service
+  } chi_resp_t;
+
+  // CHI Data Channel Structure
+  typedef struct packed {
+    logic [CHI_TXN_ID_WIDTH-1:0]    txn_id;      // Transaction ID  
+    logic [CHI_NODE_ID_WIDTH-1:0]   src_id;      // Source node ID
+    logic [CHI_NODE_ID_WIDTH-1:0]   tgt_id;      // Target node ID
+    logic [CHI_DATA_WIDTH-1:0]      data;        // Data payload
+    logic [CHI_BE_WIDTH-1:0]        be;          // Byte enables
+    logic [1:0]                     data_id;     // Data identifier
+    logic                           ccid;        // Critical chunk ID
+    logic                           data_pull;   // Data pull indication
+    logic [CHI_RSVDC_WIDTH-1:0]     rsvdc;       // Reserved field
+    logic [QOS_WIDTH-1:0]           qos;         // Quality of Service
+  } chi_data_t;
+
+  // CHI Snoop Channel Structure
+  typedef struct packed {
+    logic [CHI_TXN_ID_WIDTH-1:0]    txn_id;      // Transaction ID
+    logic [CHI_NODE_ID_WIDTH-1:0]   src_id;      // Source node ID
+    logic [CHI_NODE_ID_WIDTH-1:0]   tgt_id;      // Target node ID  
+    logic [CHI_REQ_ADDR_WIDTH-1:0]  addr;        // Address
+    chi_opcode_e                    opcode;      // Snoop opcode
+    logic                           ns;          // Non-secure access
+    logic                           do_not_goto_sd; // Do not go to Shared Dirty
+    logic                           ret_to_src;  // Return data to source
+    logic [CHI_RSVDC_WIDTH-1:0]     rsvdc;       // Reserved field
+    logic [QOS_WIDTH-1:0]           qos;         // Quality of Service
+  } chi_snoop_t;
+
+  // Directory Entry Structure
+  typedef struct packed {
+    chi_cache_state_e               state;       // Cache line state
+    logic [CHI_NODE_ID_WIDTH-1:0]   owner;       // Owner node ID (if exclusive)
+    logic [63:0]                    sharers;     // Sharer bit vector (64 nodes max)
+    logic                           dirty;       // Dirty bit
+    logic                           valid;       // Valid entry
+    logic [CHI_TXN_ID_WIDTH-1:0]    pending_txn; // Pending transaction ID
+  } chi_directory_entry_t;
 
   // =============================================================================
   // PERFORMANCE AND QOS PARAMETERS
@@ -184,81 +329,91 @@ package nebula_pkg;
   // AXI4 TRANSACTION STRUCTURES
   // =============================================================================
   
+  // AXI4 burst types
+  typedef enum logic [1:0] {
+    AXI_BURST_FIXED = 2'b00,
+    AXI_BURST_INCR  = 2'b01,
+    AXI_BURST_WRAP  = 2'b10,
+    AXI_BURST_RSVD  = 2'b11
+  } axi_burst_e;
+  
+  // AXI4 response types
+  typedef enum logic [1:0] {
+    AXI_RESP_OKAY   = 2'b00,
+    AXI_RESP_EXOKAY = 2'b01,
+    AXI_RESP_SLVERR = 2'b10,
+    AXI_RESP_DECERR = 2'b11
+  } axi_resp_e;
+  
+  // AXI4 Write Address Channel
   typedef struct packed {
-    logic [AXI_ID_WIDTH-1:0]     id;
-    logic [AXI_ADDR_WIDTH-1:0]   addr;
-    logic [7:0]                  len;      // Burst length
-    logic [2:0]                  size;     // Burst size
-    logic [1:0]                  burst;    // Burst type
-    logic [QOS_WIDTH-1:0]        qos;
-    logic                        valid;
+    logic [AXI_ID_WIDTH-1:0]     awid;
+    logic [AXI_ADDR_WIDTH-1:0]   awaddr;
+    logic [7:0]                  awlen;      // Burst length
+    logic [2:0]                  awsize;     // Burst size
+    logic [1:0]                  awburst;    // Burst type
+    logic                        awlock;     // Lock type
+    logic [3:0]                  awcache;    // Cache type
+    logic [2:0]                  awprot;     // Protection type
+    logic [QOS_WIDTH-1:0]        awqos;      // QoS identifier
+    logic [3:0]                  awregion;   // Region identifier
+    logic [AXI_AWUSER_WIDTH-1:0] awuser;     // User signal
   } axi_aw_t;
   
+  // AXI4 Write Data Channel
   typedef struct packed {
-    logic [AXI_DATA_WIDTH-1:0]   data;
-    logic [AXI_STRB_WIDTH-1:0]   strb;
-    logic                        last;
-    logic                        valid;
+    logic [AXI_DATA_WIDTH-1:0]   wdata;
+    logic [AXI_STRB_WIDTH-1:0]   wstrb;      // Write strobe
+    logic                        wlast;      // Write last
+    logic [AXI_WUSER_WIDTH-1:0]  wuser;      // User signal
   } axi_w_t;
   
+  // AXI4 Write Response Channel
   typedef struct packed {
-    logic [AXI_ID_WIDTH-1:0]     id;
-    logic [AXI_ADDR_WIDTH-1:0]   addr;
-    logic [7:0]                  len;
-    logic [2:0]                  size;
-    logic [1:0]                  burst;
-    logic [QOS_WIDTH-1:0]        qos;
-    logic                        valid;
+    logic [AXI_ID_WIDTH-1:0]     bid;
+    logic [1:0]                  bresp;      // Write response
+    logic [AXI_BUSER_WIDTH-1:0]  buser;      // User signal
+  } axi_b_t;
+  
+  // AXI4 Read Address Channel
+  typedef struct packed {
+    logic [AXI_ID_WIDTH-1:0]     arid;
+    logic [AXI_ADDR_WIDTH-1:0]   araddr;
+    logic [7:0]                  arlen;      // Burst length
+    logic [2:0]                  arsize;     // Burst size
+    logic [1:0]                  arburst;    // Burst type
+    logic                        arlock;     // Lock type
+    logic [3:0]                  arcache;    // Cache type
+    logic [2:0]                  arprot;     // Protection type
+    logic [QOS_WIDTH-1:0]        arqos;      // QoS identifier
+    logic [3:0]                  arregion;   // Region identifier
+    logic [AXI_ARUSER_WIDTH-1:0] aruser;     // User signal
   } axi_ar_t;
   
+  // AXI4 Read Data Channel
   typedef struct packed {
-    logic [AXI_ID_WIDTH-1:0]     id;
-    logic [AXI_DATA_WIDTH-1:0]   data;
-    logic [1:0]                  resp;
-    logic                        last;
-    logic                        valid;
+    logic [AXI_ID_WIDTH-1:0]     rid;
+    logic [AXI_DATA_WIDTH-1:0]   rdata;
+    logic [1:0]                  rresp;      // Read response
+    logic                        rlast;      // Read last
+    logic [AXI_RUSER_WIDTH-1:0]  ruser;      // User signal
   } axi_r_t;
   
+  // Outstanding Transaction Entry
   typedef struct packed {
-    logic [AXI_ID_WIDTH-1:0]     id;
-    logic [1:0]                  resp;
     logic                        valid;
-  } axi_b_t;
-
-  // =============================================================================
-  // CHI TRANSACTION STRUCTURES  
-  // =============================================================================
+    logic [AXI_ID_WIDTH-1:0]     axi_id;
+    logic [AXI_ADDR_WIDTH-1:0]   base_addr;
+    logic [7:0]                  burst_len;
+    logic [2:0]                  burst_size;
+    logic [1:0]                  burst_type;
+    logic [7:0]                  beat_count;
+    logic                        is_write;
+    logic [PACKET_ID_WIDTH-1:0]  packet_id;
+    logic [COORD_WIDTH-1:0]      dest_x;
+    logic [COORD_WIDTH-1:0]      dest_y;
+  } transaction_entry_t;
   
-  typedef enum logic [5:0] {
-    // Request opcodes
-    CHI_ReadShared     = 6'h01,
-    CHI_ReadClean      = 6'h02, 
-    CHI_ReadOnce       = 6'h03,
-    CHI_ReadUnique     = 6'h07,
-    CHI_WriteBackFull  = 6'h08,
-    CHI_WriteEvictFull = 6'h0A,
-    CHI_WriteUniquePtl = 6'h18,
-    CHI_WriteUniqueFull = 6'h19
-  } chi_opcode_e;
-  
-  typedef struct packed {
-    logic [CHI_NODE_ID_WIDTH-1:0] src_id;
-    logic [CHI_NODE_ID_WIDTH-1:0] tgt_id;
-    logic [7:0]                   txn_id;
-    chi_opcode_e                  opcode;
-    logic [CHI_REQ_ADDR_WIDTH-1:0] addr;
-    logic [2:0]                   size;
-    logic [QOS_WIDTH-1:0]         qos;
-  } chi_req_t;
-  
-  // CHI coherency states
-  typedef enum logic [2:0] {
-    CHI_INVALID      = 3'b000,  // I
-    CHI_UNIQUE_CLEAN = 3'b001,  // UC
-    CHI_UNIQUE_DIRTY = 3'b010,  // UD
-    CHI_SHARED_CLEAN = 3'b011,  // SC
-    CHI_SHARED_DIRTY = 3'b100   // SD
-  } chi_state_e;
 
   // =============================================================================
   // ERROR CODES AND DEBUG

@@ -134,8 +134,22 @@ module nebula_router #(
       // Input port VC selection logic
       always_comb begin
         logic [VC_ID_WIDTH-1:0] selected_vc;
+        logic any_vc_available;
         
-        flit_in_ready[g_port] = 1'b0;
+        // Ready signal indicates availability to accept flits
+        // More robust ready signal generation
+        any_vc_available = 1'b0;
+        for (int v = 0; v < NUM_VCS; v++) begin
+          // Check if VC has space (not full) and is initialized properly
+          if (!vc_full[g_port][v] && rst_n) begin
+            any_vc_available = 1'b1;
+            break; // Early exit for efficiency
+          end
+        end
+        
+        // Only assert ready when reset is complete and VCs are available
+        flit_in_ready[g_port] = rst_n && any_vc_available;
+        
         selected_vc = '0; // Default value to prevent latch
         for (int v = 0; v < NUM_VCS; v++) begin
           vc_write_en[g_port][v] = 1'b0;
@@ -148,7 +162,6 @@ module nebula_router #(
           
           if (selected_vc < NUM_VCS && !vc_full[g_port][selected_vc]) begin
             vc_write_en[g_port][selected_vc] = 1'b1;
-            flit_in_ready[g_port] = 1'b1;
             $display("[DEBUG] @%0t: Writing to VC[%0d][%0d]: flit_type=%0d, dest=(%0d,%0d), src=(%0d,%0d)", 
                      $time, g_port, selected_vc, flit_in[g_port].flit_type, 
                      flit_in[g_port].dest_x, flit_in[g_port].dest_y, 
