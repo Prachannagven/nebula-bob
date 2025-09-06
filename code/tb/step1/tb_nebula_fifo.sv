@@ -180,15 +180,16 @@ module tb_nebula_fifo;
     // Read single item
     @(posedge clk);
     rd_en = 1;
-    
-    @(posedge clk);
-    rd_en = 0;
     expected_data = test_data_queue.pop_front();
     
+    // Sample the data while rd_en is active and FIFO is not yet empty
     if (rd_data !== expected_data) begin
       $error("Data mismatch: expected %h, got %h", expected_data, rd_data);
       error_count++;
     end
+    
+    @(posedge clk);
+    rd_en = 0;
     
     @(posedge clk);
     if (empty !== 1'b1) begin
@@ -206,6 +207,7 @@ module tb_nebula_fifo;
   
   // Test 4: Full/empty behavior
   task test_full_empty();
+    logic [DATA_WIDTH-1:0] sampled_data;
     $display("\n--- Test 4: Full/Empty Behavior ---");
     test_count++;
     
@@ -231,16 +233,18 @@ module tb_nebula_fifo;
     // Empty FIFO completely
     for (int i = 0; i < DEPTH; i++) begin
       @(posedge clk);
+      // Sample data before asserting read enable
+      sampled_data = rd_data;
+      expected_data = test_data_queue.pop_front();
       rd_en = 1;
+      
+      if (sampled_data !== expected_data) begin
+        $error("Data mismatch at position %0d: expected %h, got %h", i, expected_data, sampled_data);
+        error_count++;
+      end
       
       @(posedge clk);
       rd_en = 0;
-      expected_data = test_data_queue.pop_front();
-      
-      if (rd_data !== expected_data) begin
-        $error("Data mismatch at position %0d: expected %h, got %h", i, expected_data, rd_data);
-        error_count++;
-      end
     end
     
     @(posedge clk);
@@ -321,8 +325,12 @@ module tb_nebula_fifo;
     // Simultaneous read/write
     begin
       automatic logic [7:0] initial_count;
+      automatic logic [DATA_WIDTH-1:0] sampled_data;
       initial_count = count;
       @(posedge clk);
+      // Sample data before asserting enables
+      sampled_data = rd_data;
+      expected_data = test_data_queue.pop_front();
       wr_en = 1;
       rd_en = 1;
       wr_data = 32'hCAFEBABE;
@@ -331,11 +339,10 @@ module tb_nebula_fifo;
       wr_en = 0;
       rd_en = 0;
       
-      expected_data = test_data_queue.pop_front();
       test_data_queue.push_back(32'hCAFEBABE);
       
-      if (rd_data !== expected_data) begin
-        $error("Simultaneous R/W data mismatch: expected %h, got %h", expected_data, rd_data);
+      if (sampled_data !== expected_data) begin
+        $error("Simultaneous R/W data mismatch: expected %h, got %h", expected_data, sampled_data);
         error_count++;
       end
     
@@ -364,6 +371,7 @@ module tb_nebula_fifo;
     
     begin
       automatic logic [DATA_WIDTH-1:0] test_patterns[8];
+      automatic logic [DATA_WIDTH-1:0] sampled_data;
       test_patterns[0] = 32'h00000000;
       test_patterns[1] = 32'hFFFFFFFF;
       test_patterns[2] = 32'hAAAAAAAA;
@@ -387,16 +395,18 @@ module tb_nebula_fifo;
     // Read and verify all patterns
     foreach (test_patterns[i]) begin
       @(posedge clk);
+      // Sample data before asserting read enable
+      sampled_data = rd_data;
+      expected_data = test_data_queue.pop_front();
       rd_en = 1;
+      
+      if (sampled_data !== expected_data) begin
+        $error("Pattern %0d mismatch: expected %h, got %h", i, expected_data, sampled_data);
+        error_count++;
+      end
       
       @(posedge clk);
       rd_en = 0;
-      expected_data = test_data_queue.pop_front();
-      
-      if (rd_data !== expected_data) begin
-        $error("Pattern %0d mismatch: expected %h, got %h", i, expected_data, rd_data);
-        error_count++;
-      end
     end
     end // end of automatic begin block
     

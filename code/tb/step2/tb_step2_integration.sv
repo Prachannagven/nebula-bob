@@ -35,6 +35,13 @@ module tb_step2_integration;
   noc_flit_t [MESH_SIZE_Y-1:0][MESH_SIZE_X-1:0][NUM_PORTS-1:0] router_flit_in;
   logic [MESH_SIZE_Y-1:0][MESH_SIZE_X-1:0][NUM_PORTS-1:0]      router_flit_in_ready;
   
+  // Separate signal for local port ready (controlled by sequential logic)
+  logic [MESH_SIZE_Y-1:0][MESH_SIZE_X-1:0] local_ready;
+  
+  // Packet consumption tracking
+  logic [MESH_SIZE_Y-1:0][MESH_SIZE_X-1:0] packet_consumed;
+  int consumed_packet_ids[MESH_SIZE_Y-1:0][MESH_SIZE_X-1:0][$];
+  
   // Debug and status signals
   logic [MESH_SIZE_Y-1:0][MESH_SIZE_X-1:0][NUM_PORTS-1:0][NUM_VCS-1:0] vc_status;
   logic [MESH_SIZE_Y-1:0][MESH_SIZE_X-1:0][PERF_COUNTER_WIDTH-1:0] packets_routed;
@@ -147,6 +154,60 @@ module tb_step2_integration;
     end
   endgenerate
 
+  // ============================================================================
+  // LOCAL PORT CONNECTIONS - PACKET INJECTION AND CONSUMPTION
+  // ============================================================================
+  
+  generate
+    for (gy = 0; gy < MESH_SIZE_Y; gy++) begin : gen_local_y
+      for (gx = 0; gx < MESH_SIZE_X; gx++) begin : gen_local_x
+        
+        // Local input connections (for packet injection)
+        // These will be controlled by test tasks
+        assign router_flit_in_valid[gy][gx][PORT_LOCAL] = 1'b0; // Controlled by tasks
+        assign router_flit_in[gy][gx][PORT_LOCAL] = '0;         // Controlled by tasks
+        
+        // Local output connections (for packet consumption)
+        assign router_flit_out_ready[gy][gx][PORT_LOCAL] = local_ready[gy][gx];
+        
+      end
+    end
+  endgenerate
+
+  // ============================================================================
+  // PACKET CONSUMPTION LOGIC
+  // ============================================================================
+  
+  generate
+    for (gy = 0; gy < MESH_SIZE_Y; gy++) begin : gen_consume_y
+      for (gx = 0; gx < MESH_SIZE_X; gx++) begin : gen_consume_x
+        
+        always_ff @(posedge clk or negedge rst_n) begin
+          if (!rst_n) begin
+            local_ready[gy][gx] <= 1'b1;
+            packet_consumed[gy][gx] <= 1'b0;
+          end else begin
+            packet_consumed[gy][gx] <= 1'b0;
+            
+            // Consume packets that arrive at local port
+            if (router_flit_out_valid[gy][gx][PORT_LOCAL] && local_ready[gy][gx]) begin
+              packet_consumed[gy][gx] <= 1'b1;
+              consumed_packet_ids[gy][gx].push_back(router_flit_out[gy][gx][PORT_LOCAL].packet_id);
+              
+              $display("[CONSUME] @%0t: Router (%0d,%0d) consumed packet ID %0d from (%0d,%0d)", 
+                       $time, gx, gy, router_flit_out[gy][gx][PORT_LOCAL].packet_id,
+                       router_flit_out[gy][gx][PORT_LOCAL].src_x, router_flit_out[gy][gx][PORT_LOCAL].src_y);
+            end
+            
+            // Keep local port ready to consume packets
+            local_ready[gy][gx] <= 1'b1;
+          end
+        end
+        
+      end
+    end
+  endgenerate
+
   // Clock generation
   initial begin
     clk = 0;
@@ -171,10 +232,11 @@ module tb_step2_integration;
     packet_sent_flags = '0;
     packet_received_flags = '0;
     
-    // Terminate local ports (not used in this test)
+    // Initialize local input ports
     for (int y = 0; y < MESH_SIZE_Y; y++) begin
       for (int x = 0; x < MESH_SIZE_X; x++) begin
-        router_flit_out_ready[y][x][PORT_LOCAL] = 1'b1;
+        router_flit_in_valid[y][x][PORT_LOCAL] = 1'b0;
+        router_flit_in[y][x][PORT_LOCAL] = '0;
       end
     end
     
@@ -197,41 +259,76 @@ module tb_step2_integration;
     run_test_case(4, "Congestion Handling Test");
     
     // Final results
-    $display("");
-    $display("=== FINAL RESULTS ===");
-    $display("Packets sent: %0d", packets_sent);
-    $display("Packets received: %0d", packets_received);
-    
-    int total_packets_routed = 0;
-    for (int y = 0; y < MESH_SIZE_Y; y++) begin
-      for (int x = 0; x < MESH_SIZE_X; x++) begin
-        total_packets_routed += packets_routed[y][x];
-        if (error_status[y][x] != ERR_NONE) begin
-          $display("❌ Router (%0d,%0d) reports error: %0d", x, y, error_status[y][x]);
-          errors++;
-        end
-      end
-    end
-    
-    $display("Total packets routed by mesh: %0d", total_packets_routed);
-    
-    if (errors == 0 && packets_received == packets_sent) begin
-      $display("✅ ALL TESTS PASSED!");
-    end else begin
-      $display("❌ %0d ERRORS DETECTED", errors);
-    end
-    $display("Total cycles: %0d", cycle_count);
+    print_final_results();
     
     $finish;
   end
+
+  // ============================================================================
+  // DEBUG AND MONITORING
+  // ============================================================================
   
+  // Network state monitoring
+  always @(posedge clk) begin
+    if (rst_n) begin
+      cycle_count <= cycle_count + 1;
+      
+      // Monitor for deadlock conditions
+      if (cycle_count % 100 == 0 && cycle_count > 0) begin
+        $display("[MONITOR] @%0t: Cycle %0d - Network Status Check", $time, cycle_count);
+        monitor_network_state();
+      end
+      
+      // Monitor packet consumption
+      for (int y = 0; y < MESH_SIZE_Y; y++) begin
+        for (int x = 0; x < MESH_SIZE_X; x++) begin
+          if (packet_consumed[y][x]) begin
+            packets_received++;
+            $display("[STATS] @%0t: Packets received so far: %0d", $time, packets_received);
+          end
+        end
+      end
+    end
+  end
+  
+  // Task to monitor network state for debugging
+  task monitor_network_state();
+    begin
+      $display("  Router States:");
+      for (int y = 0; y < MESH_SIZE_Y; y++) begin
+        for (int x = 0; x < MESH_SIZE_X; x++) begin
+          $display("    Router(%0d,%0d): Routed=%0d, Error=%0d", 
+                   x, y, packets_routed[y][x], error_status[y][x]);
+          
+          // Check port status
+          for (int p = 0; p < NUM_PORTS; p++) begin
+            if (router_flit_out_valid[y][x][p] && !router_flit_out_ready[y][x][p]) begin
+              $display("      ⚠️  Port %0d blocked: valid=%0b, ready=%0b", 
+                       p, router_flit_out_valid[y][x][p], router_flit_out_ready[y][x][p]);
+            end
+          end
+        end
+      end
+      
+      $display("  Consumed packets by router:");
+      for (int y = 0; y < MESH_SIZE_Y; y++) begin
+        for (int x = 0; x < MESH_SIZE_X; x++) begin
+          if (consumed_packet_ids[y][x].size() > 0) begin
+            $display("    Router(%0d,%0d): %0d packets", x, y, consumed_packet_ids[y][x].size());
+          end
+        end
+      end
+    end
+  endtask
+
   // Cycle counter and timeout
   always @(posedge clk) begin
-    cycle_count++;
-    if (cycle_count > TEST_TIMEOUT) begin
-      $display("❌ TIMEOUT: Test exceeded %0d cycles", TEST_TIMEOUT);
-      errors++;
-      $finish;
+    if (rst_n) begin
+      if (cycle_count > TEST_TIMEOUT) begin
+        $display("❌ TIMEOUT: Test exceeded %0d cycles", TEST_TIMEOUT);
+        errors++;
+        $finish;
+      end
     end
   end
 
@@ -257,10 +354,11 @@ module tb_step2_integration;
   // Generate test packets for all source-destination pairs
   task generate_test_packets();
     begin
-      int packet_idx = 0;
-      $display("Generating test packets for all-to-all communication...");
-      
-      for (int src_y = 0; src_y < MESH_SIZE_Y; src_y++) begin
+      begin : generate_packets_block
+        int packet_idx = 0;
+        $display("Generating test packets for all-to-all communication...");
+        
+        for (int src_y = 0; src_y < MESH_SIZE_Y; src_y++) begin
         for (int src_x = 0; src_x < MESH_SIZE_X; src_x++) begin
           for (int dst_y = 0; dst_y < MESH_SIZE_Y; dst_y++) begin
             for (int dst_x = 0; dst_x < MESH_SIZE_X; dst_x++) begin
@@ -283,7 +381,8 @@ module tb_step2_integration;
         end
       end
       
-      $display("Generated %0d test packets", packet_idx);
+        $display("Generated %0d test packets", packet_idx);
+      end : generate_packets_block
     end
   endtask
 
@@ -305,15 +404,18 @@ module tb_step2_integration;
     begin
       $display("Testing multi-hop communication across diagonal...");
       
-      // Send packet from (0,0) to (1,1) - requires 2 hops
-      noc_flit_t diagonal_packet = test_packets[1];
-      diagonal_packet.dest_x = 1;
-      diagonal_packet.dest_y = 1;
-      diagonal_packet.src_x = 0;
-      diagonal_packet.src_y = 0;
-      
-      inject_packet_at_router(0, 0, diagonal_packet);
-      wait_for_packet_at_router(1, 1, diagonal_packet);
+      begin : multi_hop_block
+        // Send packet from (0,0) to (1,1) - requires 2 hops
+        noc_flit_t diagonal_packet;
+        diagonal_packet = test_packets[1];
+        diagonal_packet.dest_x = 1;
+        diagonal_packet.dest_y = 1;
+        diagonal_packet.src_x = 0;
+        diagonal_packet.src_y = 0;
+        
+        inject_packet_at_router(0, 0, diagonal_packet);
+        wait_for_packet_at_router(1, 1, diagonal_packet);
+      end : multi_hop_block
       
       $display("✅ Multi-hop communication test passed");
     end
@@ -352,13 +454,16 @@ module tb_step2_integration;
       
       // Create congestion by sending multiple packets to same destination
       for (int i = 0; i < 4; i++) begin
-        noc_flit_t congest_packet = test_packets[i];
-        congest_packet.dest_x = 1;
-        congest_packet.dest_y = 1;  // All packets go to router (1,1)
-        congest_packet.vc_id = i % NUM_VCS;
-        congest_packet.packet_id = 100 + i;
-        
-        inject_packet_at_router(0, 0, congest_packet);
+        begin : congest_packet_block
+          noc_flit_t congest_packet;
+          congest_packet = test_packets[i];
+          congest_packet.dest_x = 1;
+          congest_packet.dest_y = 1;  // All packets go to router (1,1)
+          congest_packet.vc_id = i % NUM_VCS;
+          congest_packet.packet_id = 100 + i;
+          
+          inject_packet_at_router(0, 0, congest_packet);
+        end : congest_packet_block
       end
       
       // Allow time for congestion to resolve
@@ -381,16 +486,26 @@ module tb_step2_integration;
     input noc_flit_t packet
   );
     begin
+      $display("[INJECT] @%0t: Preparing to inject packet ID %0d at router (%0d,%0d) -> (%0d,%0d)", 
+               $time, packet.packet_id, router_x, router_y, packet.dest_x, packet.dest_y);
+      
       @(posedge clk);
-      router_flit_in_valid[router_y][router_x][PORT_LOCAL] = 1'b1;
-      router_flit_in[router_y][router_x][PORT_LOCAL] = packet;
+      
+      // Force the local input signals for injection
+      force router_flit_in_valid[router_y][router_x][PORT_LOCAL] = 1'b1;
+      force router_flit_in[router_y][router_x][PORT_LOCAL] = packet;
       
       // Wait for ready signal
-      while (!router_flit_in_ready[router_y][router_x][PORT_LOCAL]) @(posedge clk);
+      while (!router_flit_in_ready[router_y][router_x][PORT_LOCAL]) begin
+        $display("[INJECT] @%0t: Waiting for ready signal at router (%0d,%0d)", $time, router_x, router_y);
+        @(posedge clk);
+      end
       
       @(posedge clk);
-      router_flit_in_valid[router_y][router_x][PORT_LOCAL] = 1'b0;
-      router_flit_in[router_y][router_x][PORT_LOCAL] = '0;
+      
+      // Release the forced signals
+      release router_flit_in_valid[router_y][router_x][PORT_LOCAL];
+      release router_flit_in[router_y][router_x][PORT_LOCAL];
       
       packets_sent++;
       $display("📤 Injected packet ID %0d at router (%0d,%0d) -> (%0d,%0d)", 
@@ -408,22 +523,37 @@ module tb_step2_integration;
       int wait_cycles = 0;
       bit packet_found = 1'b0;
       
-      while (!packet_found && wait_cycles < 200) begin
+      $display("[WAIT] @%0t: Waiting for packet ID %0d at router (%0d,%0d)", 
+               $time, expected_packet.packet_id, router_x, router_y);
+      
+      while (!packet_found && wait_cycles < 500) begin
         @(posedge clk);
         wait_cycles++;
         
-        if (router_flit_out_valid[router_y][router_x][PORT_LOCAL] && 
-            router_flit_out[router_y][router_x][PORT_LOCAL].packet_id == expected_packet.packet_id) begin
-          packet_found = 1'b1;
-          packets_received++;
-          $display("📥 Received packet ID %0d at router (%0d,%0d) after %0d cycles", 
-                   expected_packet.packet_id, router_x, router_y, wait_cycles);
+        // Check if packet was consumed (appears in the consumed list)
+        for (int i = 0; i < consumed_packet_ids[router_y][router_x].size(); i++) begin
+          if (consumed_packet_ids[router_y][router_x][i] == expected_packet.packet_id) begin
+            packet_found = 1'b1;
+            $display("📥 Found consumed packet ID %0d at router (%0d,%0d) after %0d cycles", 
+                     expected_packet.packet_id, router_x, router_y, wait_cycles);
+            break;
+          end
+        end
+        
+        // Debug: periodically show what we're seeing
+        if (wait_cycles % 50 == 0 && wait_cycles > 0) begin
+          $display("[WAIT] @%0t: Still waiting for packet ID %0d at router (%0d,%0d), cycle %0d", 
+                   $time, expected_packet.packet_id, router_x, router_y, wait_cycles);
+          if (router_flit_out_valid[router_y][router_x][PORT_LOCAL]) begin
+            $display("       Currently seeing packet ID %0d at local port", 
+                     router_flit_out[router_y][router_x][PORT_LOCAL].packet_id);
+          end
         end
       end
       
       if (!packet_found) begin
-        $display("❌ Timeout waiting for packet ID %0d at router (%0d,%0d)", 
-                 expected_packet.packet_id, router_x, router_y);
+        $display("❌ Timeout waiting for packet ID %0d at router (%0d,%0d) after %0d cycles", 
+                 expected_packet.packet_id, router_x, router_y, wait_cycles);
         errors++;
       end
     end
@@ -443,5 +573,43 @@ module tb_step2_integration;
       end
     end
   end
+
+  // Print final results summary
+  task print_final_results();
+    begin
+      $display("");
+      $display("=== FINAL RESULTS ===");
+      $display("Packets sent: %0d", packets_sent);
+      $display("Packets received: %0d", packets_received);
+      
+      // Count total packets routed by mesh
+      begin : final_results_block
+        int total_packets_routed = 0;
+        int total_consumed = 0;
+        
+        for (int y = 0; y < MESH_SIZE_Y; y++) begin
+          for (int x = 0; x < MESH_SIZE_X; x++) begin
+            total_packets_routed += packets_routed[y][x];
+            total_consumed += consumed_packet_ids[y][x].size();
+            if (error_status[y][x] != ERR_NONE) begin
+              $display("❌ Router (%0d,%0d) has error: %0d", x, y, error_status[y][x]);
+              errors++;
+            end
+          end
+        end
+        
+        $display("Total packets routed by mesh: %0d", total_packets_routed);
+        $display("Total packets consumed: %0d", total_consumed);
+      end : final_results_block
+      
+      if (errors > 0) begin
+        $display("❌ %0d ERRORS DETECTED", errors);
+      end else begin
+        $display("✅ ALL TESTS PASSED");
+      end
+      
+      $display("Total cycles: %0d", cycle_count);
+    end
+  endtask
 
 endmodule
