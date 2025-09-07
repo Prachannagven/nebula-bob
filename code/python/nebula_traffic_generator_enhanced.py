@@ -304,24 +304,15 @@ class NebulaTrafficGenerator:
     ) -> str:
         """Generate SystemVerilog testbench for VCD simulation"""
 
-        num_nodes = self.config.mesh_width * self.config.mesh_height
-
         testbench_template = f"""`timescale 1ns / 1ps
 
 module tb_nebula_top_traffic;
-    import nebula_pkg::*;
 
-    // Parameters
-    parameter int MESH_WIDTH = {self.config.mesh_width};
-    parameter int MESH_HEIGHT = {self.config.mesh_height};
-    parameter int NUM_NODES = {num_nodes};
-    parameter int CONFIG_ADDR_WIDTH = 16;
-    parameter int CONFIG_DATA_WIDTH = 32;
-    parameter bit ENABLE_AXI = 1'b1;
-    parameter bit ENABLE_CHI = 1'b1;
-    parameter bit ENABLE_PERFORMANCE_MONITORING = 1'b1;
-
-    // Traffic data type definition
+    // Clock and reset
+    logic clk;
+    logic rst_n;
+    
+    // Traffic stimulus data
     typedef struct {{
         int timestamp;
         int source_node;
@@ -332,352 +323,130 @@ module tb_nebula_top_traffic;
     
     parameter int TRAFFIC_SIZE = {len(traces)};
     traffic_entry_t traffic_data[TRAFFIC_SIZE];
-
-    // Clock and reset
-    logic clk;
-    logic rst_n;
     
-    // System Configuration Interface  
-    logic                           config_req_valid;
-    logic                           config_req_ready;
-    logic [CONFIG_ADDR_WIDTH-1:0]  config_req_addr;
-    logic [CONFIG_DATA_WIDTH-1:0]  config_req_data;
-    logic                           config_req_write;
-    logic                           config_resp_valid;
-    logic                           config_resp_ready;
-    logic [CONFIG_DATA_WIDTH-1:0]  config_resp_data;
-    logic                           config_resp_error;
-    
-    // Memory interfaces
-    logic [NUM_NODES-1:0]                     mem_req_valid;
-    logic [NUM_NODES-1:0]                     mem_req_ready;
-    logic [NUM_NODES-1:0][CHI_REQ_ADDR_WIDTH-1:0] mem_req_addr;
-    logic [NUM_NODES-1:0]                     mem_req_write;
-    logic [NUM_NODES-1:0][CHI_DATA_WIDTH-1:0] mem_req_data;
-    logic [NUM_NODES-1:0][CHI_BE_WIDTH-1:0]   mem_req_be;
-    logic [NUM_NODES-1:0]                     mem_resp_valid;
-    logic [NUM_NODES-1:0]                     mem_resp_ready;
-    logic [NUM_NODES-1:0][CHI_DATA_WIDTH-1:0] mem_resp_data;
-    logic [NUM_NODES-1:0]                     mem_resp_error;
-    
-    // AXI interfaces  
-    logic [NUM_NODES-1:0]                     axi_aw_valid;
-    logic [NUM_NODES-1:0]                     axi_aw_ready;
-    axi_aw_t [NUM_NODES-1:0]                  axi_aw;
-    logic [NUM_NODES-1:0]                     axi_w_valid;
-    logic [NUM_NODES-1:0]                     axi_w_ready;
-    axi_w_t [NUM_NODES-1:0]                   axi_w;
-    logic [NUM_NODES-1:0]                     axi_b_valid;
-    logic [NUM_NODES-1:0]                     axi_b_ready;
-    axi_b_t [NUM_NODES-1:0]                   axi_b;
-    logic [NUM_NODES-1:0]                     axi_ar_valid;
-    logic [NUM_NODES-1:0]                     axi_ar_ready;
-    axi_ar_t [NUM_NODES-1:0]                  axi_ar;
-    logic [NUM_NODES-1:0]                     axi_r_valid;
-    logic [NUM_NODES-1:0]                     axi_r_ready;
-    axi_r_t [NUM_NODES-1:0]                   axi_r;
-    
-    // CHI interfaces
-    logic [NUM_NODES-1:0]                     chi_req_valid;
-    logic [NUM_NODES-1:0]                     chi_req_ready;
-    chi_req_t [NUM_NODES-1:0]                 chi_req;
-    logic [NUM_NODES-1:0]                     chi_resp_valid;
-    logic [NUM_NODES-1:0]                     chi_resp_ready;
-    chi_resp_t [NUM_NODES-1:0]                chi_resp;
-    logic [NUM_NODES-1:0]                     chi_dat_req_valid;
-    logic [NUM_NODES-1:0]                     chi_dat_req_ready;
-    chi_data_t [NUM_NODES-1:0]                chi_dat_req;
-    logic [NUM_NODES-1:0]                     chi_dat_resp_valid;
-    logic [NUM_NODES-1:0]                     chi_dat_resp_ready;
-    chi_data_t [NUM_NODES-1:0]                chi_dat_resp;
-    
-    // System Status and Debug  
-    logic [31:0]                              system_status;
-    logic [31:0]                              error_status;
-    logic [31:0]                              performance_counters [15:0];
-    logic                                     debug_trace_valid;
-    logic [63:0]                             debug_trace_data;
-    logic [7:0]                              debug_trace_node_id;
-
     // DUT instantiation
     nebula_top #(
-        .MESH_WIDTH(MESH_WIDTH),
-        .MESH_HEIGHT(MESH_HEIGHT),
-        .NUM_NODES(NUM_NODES),
-        .CONFIG_ADDR_WIDTH(CONFIG_ADDR_WIDTH),
-        .CONFIG_DATA_WIDTH(CONFIG_DATA_WIDTH),
-        .ENABLE_AXI(ENABLE_AXI),
-        .ENABLE_CHI(ENABLE_CHI),
-        .ENABLE_PERFORMANCE_MONITORING(ENABLE_PERFORMANCE_MONITORING)
+        .MESH_WIDTH({self.config.mesh_width}),
+        .MESH_HEIGHT({self.config.mesh_height}),
+        .ENABLE_AXI({1 if self.config.enable_axi else 0}),
+        .ENABLE_CHI({1 if self.config.enable_chi else 0})
     ) dut (
         .clk(clk),
         .rst_n(rst_n),
-        .config_req_valid(config_req_valid),
-        .config_req_ready(config_req_ready),
-        .config_req_addr(config_req_addr),
-        .config_req_data(config_req_data),
-        .config_req_write(config_req_write),
-        .config_resp_valid(config_resp_valid),
-        .config_resp_ready(config_resp_ready),
-        .config_resp_data(config_resp_data),
-        .config_resp_error(config_resp_error),
-        .mem_req_valid(mem_req_valid),
-        .mem_req_ready(mem_req_ready),
-        .mem_req_addr(mem_req_addr),   
-        .mem_req_write(mem_req_write),
-        .mem_req_data(mem_req_data),
-        .mem_req_be(mem_req_be),
-        .mem_resp_valid(mem_resp_valid),   
-        .mem_resp_ready(mem_resp_ready),
-        .mem_resp_data(mem_resp_data),
-        .mem_resp_error(mem_resp_error),
-        .axi_aw_valid(axi_aw_valid),   
-        .axi_aw_ready(axi_aw_ready),
-        .axi_aw(axi_aw),
-        .axi_w_valid(axi_w_valid),    
-        .axi_w_ready(axi_w_ready),
-        .axi_w(axi_w),    
-        .axi_b_valid(axi_b_valid),    
-        .axi_b_ready(axi_b_ready),
-        .axi_b(axi_b),    
-        .axi_ar_valid(axi_ar_valid),   
-        .axi_ar_ready(axi_ar_ready),
-        .axi_ar(axi_ar),   
-        .axi_r_valid(axi_r_valid),    
-        .axi_r_ready(axi_r_ready),
-        .axi_r(axi_r),    
-        .chi_req_valid(chi_req_valid),     
-        .chi_req_ready(chi_req_ready),
-        .chi_req(chi_req),
-        .chi_resp_valid(chi_resp_valid),
-        .chi_resp_ready(chi_resp_ready),
-        .chi_resp(chi_resp),
-        .chi_dat_req_valid(chi_dat_req_valid),
-        .chi_dat_req_ready(chi_dat_req_ready),
-        .chi_dat_req(chi_dat_req),
-        .chi_dat_resp_valid(chi_dat_resp_valid),
-        .chi_dat_resp_ready(chi_dat_resp_ready),
-        .chi_dat_resp(chi_dat_resp),
-        .system_status(system_status),
-        .error_status(error_status),
-        .performance_counters(performance_counters),
-        .debug_trace_valid(debug_trace_valid),
-        .debug_trace_node_id(debug_trace_node_id),
-        .debug_trace_data(debug_trace_data)
+        .config_req_valid(1'b0),
+        .config_req_ready(),
+        .config_req_addr(16'h0),
+        .config_req_data(32'h0),
+        .config_req_write(1'b0),
+        .config_resp_valid(),
+        .config_resp_ready(1'b1),
+        .config_resp_data(),
+        .config_resp_error(),
+        .debug_trace_node_id()
     );
-    
+
     // Clock generation
     initial begin
         clk = 0;
-        forever #5 clk = ~clk; // 100MHz clock
+        forever #5 clk = ~clk;  // 100MHz clock
     end
-    
-    // Reset and test sequence
+
+    // Reset generation
     initial begin
-        // Initialize signals
         rst_n = 0;
-        config_req_valid = 0;
-        config_req_addr = 0;
-        config_req_data = 0;
-        config_req_write = 0;
-        config_resp_ready = 1;
-        
-        // Initialize memory interfaces
-        mem_req_ready = '1;
-        mem_resp_valid = '0;
-        mem_resp_data = '0;
-        mem_resp_error = '0;
-        
-        // Initialize AXI interfaces
-        axi_aw_valid = '0;
-        axi_aw = '0;
-        axi_w_valid = '0;
-        axi_w = '0;
-        axi_b_ready = '1;
-        axi_ar_valid = '0;
-        axi_ar = '0;
-        axi_r_ready = '1;
-        
-        // Initialize CHI interfaces
-        chi_req_valid = '0;
-        chi_req = '0;
-        chi_resp_ready = '1;
-        chi_dat_req_valid = '0;
-        chi_dat_req = '0;
-        chi_dat_resp_ready = '1;
-        
-        // Apply reset
-        #20;
+        repeat(10) @(posedge clk);
         rst_n = 1;
-        #20;
-        
-        $display("🔧 Starting NoC traffic simulation with %0d nodes...", NUM_NODES);
-        $display("🔧 Traffic size: %0d entries", TRAFFIC_SIZE);
-        
-        // Wait for system to stabilize
-        repeat(100) @(posedge clk);
-        $display("🔧 System stabilization complete");
-        
-        // Enable VCD dumping
-        $dumpfile("tb_nebula_traffic.vcd");
-        $dumpvars(0, tb_nebula_top_traffic);
-        $display("🔧 VCD dumping enabled");
-        
-        // Load traffic data
-        $display("📝 Loading traffic data...");"""
+        $display("Reset released at time %0t", $time);
+    end
 
-        # Add traffic data initialization
-        for i, trace in enumerate(traces):
-            testbench_template += f"""
-        traffic_data[{i}].timestamp = {trace.timestamp};
-        traffic_data[{i}].source_node = {trace.source_node};
-        traffic_data[{i}].dest_node = {trace.dest_node};
-        traffic_data[{i}].packet_type = "{trace.packet_type}";
-        traffic_data[{i}].size_bytes = {trace.size_bytes};"""
-
-        testbench_template += """
-        $display("📝 Traffic data loaded: %0d entries", TRAFFIC_SIZE);
+    // Traffic injection
+    initial begin
+        // Wait for reset
+        wait(rst_n);
+        repeat(5) @(posedge clk);
         
-        // Inject traffic based on traces
-        $display("🚀 Starting traffic injection...");
+        $display("Starting traffic injection...");
+        load_traffic_data();
         inject_traffic();
-        $display("✅ Traffic injection completed!");
         
-        // Wait for packets to propagate through network
-        $display("⏳ Waiting for network to drain...");
-        repeat(10000) @(posedge clk);
+        // Let simulation run for additional cycles
+        repeat(100) @(posedge clk);
         
-        $display("🎉 Simulation completed successfully!");
-        $display("📊 Final statistics:");
-        $display("   - Traffic entries processed: %0d", TRAFFIC_SIZE);
+        $display("Simulation completed");
         $finish;
     end
 
-    // Traffic injection task with enhanced debugging
-    task inject_traffic;
-        int timeout_cycles;
+    // VCD dumping
+    initial begin
+        $dumpfile("tb_nebula_top.vcd");
+        $dumpvars(0, tb_nebula_top_traffic);
+        $display("VCD dump started");
+    end
+
+    // Load traffic data
+    task load_traffic_data();
+        // Load pre-generated traffic pattern
+"""
+
+        # Add traffic data initialization
+        for i, trace in enumerate(traces):
+            testbench_template += f"""        traffic_data[{i}].timestamp = {trace.timestamp};
+        traffic_data[{i}].source_node = {trace.source_node};
+        traffic_data[{i}].dest_node = {trace.dest_node};
+        traffic_data[{i}].packet_type = "{trace.packet_type}";
+        traffic_data[{i}].size_bytes = {trace.size_bytes};
+"""
+
+        testbench_template += (
+            """    endtask
+
+    // Traffic injection task
+    task inject_traffic();
+        int cycle_count = 0;
         
-        // Inject traffic with enhanced debugging and timeout
         for (int i = 0; i < TRAFFIC_SIZE; i++) begin
-            $display("[%0t] Processing traffic entry %0d/%0d", $time, i+1, TRAFFIC_SIZE);
-            
-            // Wait for correct cycle with timeout
-            timeout_cycles = 0;
+            // Wait for correct cycle
             while (cycle_count < traffic_data[i].timestamp) begin
                 @(posedge clk);
                 cycle_count++;
-                timeout_cycles++;
-                if (timeout_cycles > 1000) begin
-                    $display("[%0t] TIMEOUT waiting for cycle %0d (current: %0d)", 
-                            $time, traffic_data[i].timestamp, cycle_count);
-                    break;
-                end
             end
             
             // Inject packet at source node
-            $display("[%0t] Injecting %s packet %0d: node %0d -> node %0d (cycle %0d)", 
-                     $time, traffic_data[i].packet_type, i,
-                     traffic_data[i].source_node, traffic_data[i].dest_node, cycle_count);
-            
-            // Simple packet injection using AXI read/write with timeout
-            if (traffic_data[i].packet_type == "AXI_READ") begin
-                $display("[%0t] Starting AXI_READ from node %0d", $time, traffic_data[i].source_node);
-                @(posedge clk);
-                axi_ar_valid[traffic_data[i].source_node] = 1'b1;
-                axi_ar[traffic_data[i].source_node].arid = i[7:0];
-                axi_ar[traffic_data[i].source_node].araddr = traffic_data[i].dest_node << 12;
-                axi_ar[traffic_data[i].source_node].arlen = 8'h0;
-                axi_ar[traffic_data[i].source_node].arsize = 3'h3;
-                axi_ar[traffic_data[i].source_node].arburst = 2'b01;
-                
-                // Wait with timeout
-                timeout_cycles = 0;
-                while (!axi_ar_ready[traffic_data[i].source_node] && timeout_cycles < 100) begin
-                    @(posedge clk);
-                    timeout_cycles++;
-                end
-                
-                if (timeout_cycles >= 100) begin
-                    $display("[%0t] AXI_READ timeout on node %0d", $time, traffic_data[i].source_node);
-                end else begin
-                    $display("[%0t] AXI_READ handshake completed on node %0d", $time, traffic_data[i].source_node);
-                end
-                
-                @(posedge clk);
-                axi_ar_valid[traffic_data[i].source_node] = 1'b0;
-                
-            end else if (traffic_data[i].packet_type == "AXI_WRITE") begin
-                $display("[%0t] Starting AXI_WRITE from node %0d", $time, traffic_data[i].source_node);
-                @(posedge clk);
-                axi_aw_valid[traffic_data[i].source_node] = 1'b1;
-                axi_w_valid[traffic_data[i].source_node] = 1'b1;
-                axi_aw[traffic_data[i].source_node].awid = i[7:0];
-                axi_aw[traffic_data[i].source_node].awaddr = traffic_data[i].dest_node << 12;
-                axi_aw[traffic_data[i].source_node].awlen = 8'h0;
-                axi_aw[traffic_data[i].source_node].awsize = 3'h3;
-                axi_aw[traffic_data[i].source_node].awburst = 2'b01;
-                axi_w[traffic_data[i].source_node].wdata = $random;
-                axi_w[traffic_data[i].source_node].wstrb = '1;
-                axi_w[traffic_data[i].source_node].wlast = 1'b1;
-                
-                // Wait with timeout
-                timeout_cycles = 0;
-                while (!(axi_aw_ready[traffic_data[i].source_node] && axi_w_ready[traffic_data[i].source_node]) && timeout_cycles < 100) begin
-                    @(posedge clk);
-                    timeout_cycles++;
-                end
-                
-                if (timeout_cycles >= 100) begin
-                    $display("[%0t] AXI_WRITE timeout on node %0d", $time, traffic_data[i].source_node);
-                end else begin
-                    $display("[%0t] AXI_WRITE handshake completed on node %0d", $time, traffic_data[i].source_node);
-                end
-                
-                @(posedge clk);
-                axi_aw_valid[traffic_data[i].source_node] = 1'b0;
-                axi_w_valid[traffic_data[i].source_node] = 1'b0;
-            end else begin
-                $display("[%0t] Unknown packet type: %s", $time, traffic_data[i].packet_type);
-            end
-            
-            // Small delay between packets
-            $display("[%0t] Packet %0d completed, waiting before next...", $time, i);
-            repeat(3) @(posedge clk);
+            inject_packet(
+                traffic_data[i].source_node,
+                traffic_data[i].dest_node,
+                traffic_data[i].packet_type,
+                traffic_data[i].size_bytes
+            );
         end
     endtask
-    """
 
-        testbench_template += r"""
-    // Monitor traffic and performance with enhanced debugging
-    int monitor_count = 0;
-    int cycle_count = 0;
-    always @(posedge clk) begin
-        monitor_count++;
-        cycle_count++;
+    // Packet injection task
+    task inject_packet(int src_node, int dst_node, string pkt_type, int size);
+        // Convert node IDs to coordinates
+        int src_x = src_node % """
+            + str(self.config.mesh_width)
+            + """;
+        int src_y = src_node / """
+            + str(self.config.mesh_width)
+            + """;
+        int dst_x = dst_node % """
+            + str(self.config.mesh_width)
+            + """;
+        int dst_y = dst_node / """
+            + str(self.config.mesh_width)
+            + """;
         
-        // Print progress every 1000 cycles
-        if (monitor_count % 1000 == 0) begin
-            $display("[%0t] Simulation progress: cycle %0d, monitor_count %0d", 
-                    $time, cycle_count, monitor_count);
-        end
-        
-        // Monitor debug traces
-        if (debug_trace_valid) begin
-            $display("[%0t] Debug trace from node %0d: %016h", 
-                    $time, debug_trace_node_id, debug_trace_data);
-        end
-        
-        // Timeout check for overall simulation
-        if (monitor_count > 100000) begin
-            $display("[%0t] SIMULATION TIMEOUT after %0d cycles", $time, monitor_count);
-            $display("Final simulation status:");
-            $display("   - Monitor count: %0d", monitor_count);
-            $finish;
-        end
-    end
+        $display("Time %0t: Injecting %s packet from (%0d,%0d) to (%0d,%0d), size=%0d", 
+                 $time, pkt_type, src_x, src_y, dst_x, dst_y, size);
+                 
+        // TODO: Add actual AXI/CHI transaction injection based on packet type
+        // This would interface with the DUT's AXI/CHI interfaces
+    endtask
 
 endmodule
 """
+        )
 
         # Write testbench file
         with open(output_path, "w") as f:

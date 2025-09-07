@@ -1,27 +1,25 @@
 #!/usr/bin/env python3
 """
-Nebula GPU Interconnect System Dashboard
+Nebula GPU Interconnect System Dashboard - VCD Replay Mode
 
 A comprehensive pygame-based dashboard that demonstrates the capabilities
-of the Nebula NoC system by interfacing with Verilog simulations and
-providing real-time visualization of network traffic, performance metrics,
-and system status.
+of the Nebula NoC system by replaying real Verilog simulation data
+through VCD file analysis and providing real-time visualization.
 
 Features:
-- Real-time mesh topology visualization
-- Traffic flow animation with packet tracking
+- Real-time mesh topology visualization from VCD data
+- Traffic flow animation with packet tracking from real simulations
 - Performance monitoring with graphs and metrics
-- Interactive controls for traffic patterns
 - VCD file analysis and replay with custom parser
 - Router status and congestion visualization
 - Protocol-aware packet visualization (AXI4/CHI)
-- Integration with live Verilog simulation data
+- Pure Verilog simulation data replay (no synthetic traffic)
 
 VCD Integration:
-- Load VCD files from Verilog simulations (press 'L')
-- Replay real traffic patterns from hardware traces (press 'T')
-- Adjust replay speed and analyze router utilization
-- Seamless integration with live simulation generation
+- Automatically loads VCD files from Verilog simulations
+- Replays real traffic patterns from hardware traces
+- Adjustable replay speed and real-time analysis
+- Only uses data from actual Verilog RTL simulations
 """
 
 import pygame
@@ -32,8 +30,6 @@ import time
 import math
 import random
 import subprocess
-import threading
-import queue
 from enum import Enum
 from dataclasses import dataclass
 from typing import List, Dict, Tuple, Optional
@@ -56,6 +52,21 @@ try:
 except ImportError:
     VCD_PARSER_AVAILABLE = False
     print("Warning: nebula_vcd_parser not available. Simple VCD parsing disabled.")
+
+# Import traffic generator
+try:
+    from nebula_traffic_generator import (
+        NebulaTrafficGenerator,
+        TrafficConfig,
+        TrafficPattern,
+    )
+
+    TRAFFIC_GENERATOR_AVAILABLE = True
+except ImportError:
+    TRAFFIC_GENERATOR_AVAILABLE = False
+    print(
+        "Warning: nebula_traffic_generator not available. Traffic generation disabled."
+    )
 
 # Initialize Pygame
 pygame.init()
@@ -138,14 +149,6 @@ class RouterStats:
     active_vcs: int = 0
 
 
-class TrafficPattern(Enum):
-    UNIFORM_RANDOM = "uniform_random"
-    HOTSPOT = "hotspot"
-    TRANSPOSE = "transpose"
-    GPU_WORKLOAD = "gpu_workload"
-    CUSTOM = "custom"
-
-
 class NebulaDashboard:
     def __init__(self):
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -163,8 +166,6 @@ class NebulaDashboard:
         # Dashboard state
         self.running = True
         self.paused = False
-        self.simulation_running = False
-        self.current_pattern = TrafficPattern.UNIFORM_RANDOM
         self.injection_rate = 0.1
         self.packets = []
         self.packet_counter = 0
@@ -181,8 +182,7 @@ class NebulaDashboard:
         # UI Layout
         self.setup_ui_layout()
 
-        # Simulation control
-        self.verilog_process = None
+        # VCD Integration
         self.vcd_file = None
         self.vcd_data = None
         self.vcd_parser = None
@@ -190,11 +190,36 @@ class NebulaDashboard:
         self.vcd_replay_time = 0
         self.vcd_replay_speed = 1.0
 
-        # Traffic generation
-        self.traffic_thread = None
-        self.traffic_queue = queue.Queue()
+        # Traffic Configuration
+        self.traffic_config = {
+            "pattern": "uniform_random",
+            "injection_rate": 0.1,
+            "duration_cycles": 10000,
+            "packet_size": 64,
+            "enable_axi": True,
+            "enable_chi": True,
+            "hotspot_nodes": [],
+            "hotspot_probability": 0.3,
+        }
+        self.available_patterns = [
+            "uniform_random",
+            "hotspot",
+            "transpose",
+            "bit_reverse",
+            "neighbor",
+            "gpu_workload",
+            "matrix_multiply",
+            "convolution",
+        ]
+        self.current_pattern_index = 0
+        self.simulation_running = False
 
-        print("Nebula Dashboard initialized successfully!")
+        # Automatically load and start VCD replay
+        self.auto_load_vcd()
+
+        print(
+            "Nebula Dashboard initialized successfully! Traffic configuration enabled."
+        )
 
     def setup_ui_layout(self):
         """Setup UI panel positions and sizes"""
@@ -203,7 +228,8 @@ class NebulaDashboard:
 
         # Control panels
         self.control_panel = pygame.Rect(640, 80, 200, 300)
-        self.stats_panel = pygame.Rect(640, 400, 200, 280)
+        self.traffic_panel = pygame.Rect(640, 400, 200, 200)
+        self.stats_panel = pygame.Rect(640, 620, 200, 160)
         self.performance_panel = pygame.Rect(860, 80, 520, 600)
 
         # Mesh grid setup
@@ -240,85 +266,6 @@ class NebulaDashboard:
             path.append((current_x, current_y))
 
         return path
-
-    def generate_packet(self, pattern: TrafficPattern = None):
-        """Generate a new packet based on traffic pattern"""
-        if pattern is None:
-            pattern = self.current_pattern
-
-        # Source selection
-        src_x = random.randint(0, self.mesh_width - 1)
-        src_y = random.randint(0, self.mesh_height - 1)
-
-        # Destination selection based on pattern
-        if pattern == TrafficPattern.UNIFORM_RANDOM:
-            dst_x = random.randint(0, self.mesh_width - 1)
-            dst_y = random.randint(0, self.mesh_height - 1)
-
-        elif pattern == TrafficPattern.HOTSPOT:
-            # 70% traffic goes to hotspot node (3,3)
-            if random.random() < 0.7:
-                dst_x, dst_y = 3, 3
-            else:
-                dst_x = random.randint(0, self.mesh_width - 1)
-                dst_y = random.randint(0, self.mesh_height - 1)
-
-        elif pattern == TrafficPattern.TRANSPOSE:
-            # Transpose pattern: (x,y) -> (y,x)
-            dst_x, dst_y = src_y, src_x
-
-        elif pattern == TrafficPattern.GPU_WORKLOAD:
-            # GPU-like pattern: memory controllers at edges, compute in center
-            if src_x == 0 or src_x == self.mesh_width - 1:  # Memory controller
-                # Send to compute nodes in center
-                dst_x = random.randint(1, self.mesh_width - 2)
-                dst_y = random.randint(1, self.mesh_height - 2)
-            else:  # Compute node
-                # Send to memory controllers
-                dst_x = random.choice([0, self.mesh_width - 1])
-                dst_y = random.randint(0, self.mesh_height - 1)
-        else:
-            dst_x = random.randint(0, self.mesh_width - 1)
-            dst_y = random.randint(0, self.mesh_height - 1)
-
-        # Don't generate self-packets
-        if src_x == dst_x and src_y == dst_y:
-            return None
-
-        # Select packet type based on workload
-        packet_types = [PacketType.REQ, PacketType.RSP, PacketType.DAT, PacketType.SNP]
-        if pattern == TrafficPattern.GPU_WORKLOAD:
-            # GPU workload has more data and requests
-            packet_types = [
-                PacketType.REQ,
-                PacketType.DAT,
-                PacketType.DAT,
-                PacketType.RSP,
-            ]
-
-        packet_type = random.choice(packet_types)
-
-        # Calculate routing path
-        path = self.xy_routing_path(src_x, src_y, dst_x, dst_y)
-        start_pos = self.get_router_position(src_x, src_y)
-
-        packet = Packet(
-            id=self.packet_counter,
-            src_x=src_x,
-            src_y=src_y,
-            dst_x=dst_x,
-            dst_y=dst_y,
-            packet_type=packet_type,
-            current_x=float(start_pos[0]),
-            current_y=float(start_pos[1]),
-            path=path,
-            hop_index=0,
-            timestamp=time.time(),
-            size_flits=random.randint(1, 4),
-        )
-
-        self.packet_counter += 1
-        return packet
 
     def update_packets(self, dt):
         """Update packet positions and handle routing"""
@@ -377,32 +324,44 @@ class NebulaDashboard:
                 else:
                     stats.average_latency = stats.average_latency * 0.9 + latency * 0.1
 
-    def traffic_generation_thread(self):
-        """Background thread for generating traffic"""
-        while self.simulation_running:
-            if not self.paused and random.random() < self.injection_rate:
-                packet = self.generate_packet()
-                if packet:
-                    self.traffic_queue.put(packet)
-            time.sleep(0.1)  # 100ms interval
+    def auto_load_vcd(self):
+        """Automatically load the most recent VCD file and start replay"""
+        vcd_dir = os.path.join(os.path.dirname(__file__), "..", "build")
+        vcd_files = []
 
-    def start_simulation(self):
-        """Start traffic simulation"""
-        if not self.simulation_running:
-            self.simulation_running = True
-            self.traffic_thread = threading.Thread(
-                target=self.traffic_generation_thread
+        if os.path.exists(vcd_dir):
+            for file in os.listdir(vcd_dir):
+                if file.endswith(".vcd"):
+                    filepath = os.path.join(vcd_dir, file)
+                    vcd_files.append((filepath, os.path.getmtime(filepath)))
+
+        if vcd_files:
+            # Sort by modification time and get the most recent
+            vcd_files.sort(key=lambda x: x[1], reverse=True)
+            latest_vcd = vcd_files[0][0]
+            print(f"Auto-loading VCD file: {latest_vcd}")
+            self.load_vcd_file(latest_vcd)
+            self.start_vcd_replay()
+        else:
+            print(
+                "No VCD files found in build directory. Generate some simulation data first!"
             )
-            self.traffic_thread.daemon = True
-            self.traffic_thread.start()
-            print(f"Started simulation with {self.current_pattern.value} pattern")
 
-    def stop_simulation(self):
-        """Stop traffic simulation"""
-        self.simulation_running = False
-        if self.traffic_thread:
-            self.traffic_thread.join(timeout=1.0)
-        print("Stopped simulation")
+    def start_vcd_replay(self):
+        """Start VCD replay"""
+        if self.vcd_parser and not self.vcd_replay_active:
+            self.vcd_replay_active = True
+            # Start at the first packet event time
+            if self.vcd_parser.packet_events:
+                self.vcd_replay_time = self.vcd_parser.packet_events[0].timestamp
+            else:
+                self.vcd_replay_time = 0
+            print("Started VCD replay")
+
+    def stop_vcd_replay(self):
+        """Stop VCD replay"""
+        self.vcd_replay_active = False
+        print("Stopped VCD replay")
 
     def load_vcd_file(self, filepath):
         """Load and parse VCD file from Verilog simulation"""
@@ -486,6 +445,143 @@ class NebulaDashboard:
             stdout, stderr = self.verilog_process.communicate(
                 timeout=60
             )  # 1 minute for simulation
+
+            if self.verilog_process.returncode == 0:
+                print("Verilog simulation completed successfully")
+                # Look for generated VCD file in build directory
+                vcd_path = os.path.join(build_dir, "tb_nebula_top.vcd")
+                if os.path.exists(vcd_path):
+                    self.load_vcd_file(vcd_path)
+                    return True
+                else:
+                    print(f"VCD file not found at {vcd_path}")
+                    return False
+            else:
+                print(f"Verilog simulation failed: {stderr}")
+                return False
+
+        except subprocess.TimeoutExpired:
+            print("Verilog simulation timed out")
+            if self.verilog_process:
+                self.verilog_process.kill()
+            return False
+        except Exception as e:
+            print(f"Error running Verilog simulation: {e}")
+            return False
+
+    def generate_traffic_pattern(self):
+        """Generate traffic pattern using the Python traffic generator"""
+        if not TRAFFIC_GENERATOR_AVAILABLE:
+            print("Traffic generator not available. Install required dependencies.")
+            return None, []
+
+        try:
+            # Convert pattern name to enum
+            pattern_name = self.traffic_config["pattern"]
+            pattern_enum = TrafficPattern(pattern_name)
+
+            # Create configuration
+            config = TrafficConfig(
+                mesh_width=self.mesh_width,
+                mesh_height=self.mesh_height,
+                pattern=pattern_enum,
+                injection_rate=self.traffic_config["injection_rate"],
+                duration_cycles=self.traffic_config["duration_cycles"],
+                packet_size_bytes=self.traffic_config["packet_size"],
+                enable_axi=self.traffic_config["enable_axi"],
+                enable_chi=self.traffic_config["enable_chi"],
+                hotspot_nodes=self.traffic_config["hotspot_nodes"],
+                hotspot_probability=self.traffic_config["hotspot_probability"],
+            )
+
+            # Generate traffic
+            generator = NebulaTrafficGenerator(config)
+            traces = generator.generate_traffic()
+
+            print(f"Generated {len(traces)} traffic traces for pattern: {pattern_name}")
+
+            # Generate SystemVerilog testbench
+            testbench_path = os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "build",
+                f"tb_traffic_{pattern_name}.sv",
+            )
+            generator.generate_vcd_testbench(traces, testbench_path)
+
+            print(f"Generated testbench: {testbench_path}")
+            return testbench_path, traces
+
+        except Exception as e:
+            print(f"Error generating traffic pattern: {e}")
+            return None, []
+
+    def run_simulation_with_traffic(self):
+        """Generate traffic pattern and run simulation"""
+        if self.simulation_running:
+            print("Simulation already running!")
+            return
+
+        print(
+            f"Starting simulation with {self.traffic_config['pattern']} traffic pattern..."
+        )
+        self.simulation_running = True
+
+        try:
+            # Generate traffic pattern
+            testbench_path, traces = self.generate_traffic_pattern()
+            if not testbench_path:
+                self.simulation_running = False
+                return
+
+            # Run Verilog simulation with custom traffic
+            success = self.run_custom_verilog_simulation(testbench_path)
+
+            if success:
+                print("Simulation completed successfully! VCD data loaded.")
+                # Auto-start replay if VCD was loaded
+                if self.vcd_parser:
+                    self.start_vcd_replay()
+            else:
+                print("Simulation failed!")
+
+        except Exception as e:
+            print(f"Error in simulation: {e}")
+        finally:
+            self.simulation_running = False
+
+    def run_custom_verilog_simulation(self, testbench_path):
+        """Run Verilog simulation with custom testbench"""
+        if not os.path.exists(testbench_path):
+            print(f"Testbench file not found: {testbench_path}")
+            return False
+
+        try:
+            # Change to the code directory to run simulation
+            code_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            build_dir = os.path.join(code_dir, "build")
+
+            # Copy testbench to tb directory for compilation
+            tb_dir = os.path.join(code_dir, "tb", "step7")
+            testbench_dest = os.path.join(tb_dir, "tb_nebula_top_simple.sv")
+
+            import shutil
+
+            shutil.copy2(testbench_path, testbench_dest)
+            print(f"Copied testbench to {testbench_dest}")
+
+            # Run Verilator simulation using the correct target
+            cmd = ["make", "tb_nebula_top"]
+            print(f"Running: {' '.join(cmd)} in {code_dir}")
+
+            self.verilog_process = subprocess.Popen(
+                cmd,
+                cwd=code_dir,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+
+            stdout, stderr = self.verilog_process.communicate(timeout=60)
 
             if self.verilog_process.returncode == 0:
                 print("Verilog simulation completed successfully")
@@ -674,30 +770,35 @@ class NebulaDashboard:
                 self.screen.blit(id_text, id_rect)
 
     def draw_controls(self):
-        """Draw control panel"""
+        """Draw VCD replay control panel"""
         pygame.draw.rect(self.screen, COLORS["panel_bg"], self.control_panel)
         pygame.draw.rect(self.screen, COLORS["router_border"], self.control_panel, 2)
 
         y_offset = self.control_panel.y + 10
 
         # Title
-        title = self.font_medium.render("SIMULATION CONTROLS", True, COLORS["text"])
+        title = self.font_medium.render("VCD REPLAY CONTROLS", True, COLORS["text"])
         self.screen.blit(title, (self.control_panel.x + 10, y_offset))
         y_offset += 35
 
-        # Simulation status
-        status_text = "RUNNING" if self.simulation_running else "STOPPED"
-        status_color = (
-            COLORS["performance_good"]
-            if self.simulation_running
-            else COLORS["performance_bad"]
-        )
+        # VCD replay status
+        if self.vcd_parser:
+            status_text = "REPLAYING" if self.vcd_replay_active else "LOADED"
+            status_color = (
+                COLORS["performance_good"]
+                if self.vcd_replay_active
+                else COLORS["performance_medium"]
+            )
+        else:
+            status_text = "NO VCD"
+            status_color = COLORS["performance_bad"]
+
         status = self.font_small.render(f"Status: {status_text}", True, status_color)
         self.screen.blit(status, (self.control_panel.x + 10, y_offset))
         y_offset += 25
 
         # Pause status
-        if self.simulation_running:
+        if self.vcd_parser:
             pause_text = "PAUSED" if self.paused else "ACTIVE"
             pause_color = (
                 COLORS["performance_medium"]
@@ -708,12 +809,20 @@ class NebulaDashboard:
             self.screen.blit(pause, (self.control_panel.x + 10, y_offset))
         y_offset += 25
 
-        # Traffic pattern
-        pattern_text = self.font_small.render(
-            f"Pattern: {self.current_pattern.value}", True, COLORS["text"]
-        )
-        self.screen.blit(pattern_text, (self.control_panel.x + 10, y_offset))
-        y_offset += 20
+        # VCD replay speed
+        if self.vcd_parser:
+            speed_text = self.font_small.render(
+                f"Speed: {self.vcd_replay_speed:.1f}x", True, COLORS["text"]
+            )
+            self.screen.blit(speed_text, (self.control_panel.x + 10, y_offset))
+            y_offset += 20
+
+            # VCD replay time
+            time_text = self.font_small.render(
+                f"Time: {self.vcd_replay_time:.2f}", True, COLORS["text"]
+            )
+            self.screen.blit(time_text, (self.control_panel.x + 10, y_offset))
+            y_offset += 20
 
         # Injection rate
         rate_text = self.font_small.render(
@@ -730,20 +839,24 @@ class NebulaDashboard:
         self.screen.blit(packet_text, (self.control_panel.x + 10, y_offset))
         y_offset += 20
 
-        # Total packets generated
-        total_text = self.font_small.render(
-            f"Total Generated: {self.packet_counter}", True, COLORS["text"]
-        )
-        self.screen.blit(total_text, (self.control_panel.x + 10, y_offset))
+        # Total packets from VCD
+        if self.vcd_parser:
+            vcd_events = len(self.vcd_parser.packet_events)
+            events_text = self.font_small.render(
+                f"VCD Events: {vcd_events}", True, COLORS["text"]
+            )
+            self.screen.blit(events_text, (self.control_panel.x + 10, y_offset))
         y_offset += 30
 
         # Control instructions
         instructions = [
-            "SPACE - Start/Stop",
+            "SPACE - Start/Stop VCD",
             "P - Pause/Resume",
-            "1-4 - Traffic Patterns",
-            "V - Run Verilog Sim",
-            "R - Reset Stats",
+            "L - Reload VCD",
+            "↑/↓ - Replay Speed",
+            "",
+            "G - Gen Traffic & Run",
+            "N - Change Pattern",
             "+/- - Injection Rate",
         ]
 
@@ -812,6 +925,61 @@ class NebulaDashboard:
                 )
                 self.screen.blit(stat_text, (self.stats_panel.x + 10, y_offset))
                 y_offset += 15
+
+    def draw_traffic_config(self):
+        """Draw traffic configuration panel"""
+        pygame.draw.rect(self.screen, COLORS["panel_bg"], self.traffic_panel)
+        pygame.draw.rect(self.screen, COLORS["router_border"], self.traffic_panel, 2)
+
+        y_offset = self.traffic_panel.y + 10
+
+        # Title
+        title = self.font_medium.render("TRAFFIC CONFIG", True, COLORS["text"])
+        self.screen.blit(title, (self.traffic_panel.x + 10, y_offset))
+        y_offset += 35
+
+        # Current pattern
+        pattern_text = f"Pattern: {self.traffic_config['pattern']}"
+        pattern = self.font_small.render(pattern_text, True, COLORS["text"])
+        self.screen.blit(pattern, (self.traffic_panel.x + 10, y_offset))
+        y_offset += 20
+
+        # Injection rate
+        rate_text = f"Rate: {self.traffic_config['injection_rate']:.2f}"
+        rate = self.font_small.render(rate_text, True, COLORS["text"])
+        self.screen.blit(rate, (self.traffic_panel.x + 10, y_offset))
+        y_offset += 20
+
+        # Duration
+        duration_text = f"Duration: {self.traffic_config['duration_cycles']}"
+        duration = self.font_small.render(duration_text, True, COLORS["text"])
+        self.screen.blit(duration, (self.traffic_panel.x + 10, y_offset))
+        y_offset += 20
+
+        # Simulation status
+        if self.simulation_running:
+            status_text = "RUNNING SIM..."
+            status_color = COLORS["performance_medium"]
+        else:
+            status_text = "READY"
+            status_color = COLORS["performance_good"]
+
+        status = self.font_small.render(status_text, True, status_color)
+        self.screen.blit(status, (self.traffic_panel.x + 10, y_offset))
+        y_offset += 25
+
+        # Controls help
+        controls = [
+            "G - Generate & Run",
+            "P - Change Pattern",
+            "+/- - Adjust Rate",
+            "D - Change Duration",
+        ]
+
+        for control in controls:
+            control_text = self.font_small.render(control, True, COLORS["text_dim"])
+            self.screen.blit(control_text, (self.traffic_panel.x + 10, y_offset))
+            y_offset += 15
 
     def draw_performance_graphs(self):
         """Draw performance monitoring graphs"""
@@ -984,46 +1152,38 @@ class NebulaDashboard:
             self.screen.blit(id_text, id_rect)
 
     def handle_input(self, event):
-        """Handle keyboard and mouse input"""
+        """Handle keyboard and mouse input for VCD replay control"""
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
-                # Toggle simulation
-                if self.simulation_running:
-                    self.stop_simulation()
+                # Toggle VCD replay
+                if self.vcd_parser:
+                    if self.vcd_replay_active:
+                        self.stop_vcd_replay()
+                    else:
+                        self.start_vcd_replay()
                 else:
-                    self.start_simulation()
+                    print("No VCD file loaded")
 
             elif event.key == pygame.K_p:
                 # Toggle pause
                 self.paused = not self.paused
-                print(f"Simulation {'paused' if self.paused else 'resumed'}")
-
-            elif event.key == pygame.K_1:
-                self.current_pattern = TrafficPattern.UNIFORM_RANDOM
-                print(f"Switched to {self.current_pattern.value} pattern")
-
-            elif event.key == pygame.K_2:
-                self.current_pattern = TrafficPattern.HOTSPOT
-                print(f"Switched to {self.current_pattern.value} pattern")
-
-            elif event.key == pygame.K_3:
-                self.current_pattern = TrafficPattern.TRANSPOSE
-                print(f"Switched to {self.current_pattern.value} pattern")
-
-            elif event.key == pygame.K_4:
-                self.current_pattern = TrafficPattern.GPU_WORKLOAD
-                print(f"Switched to {self.current_pattern.value} pattern")
+                print(f"Replay {'paused' if self.paused else 'resumed'}")
 
             elif event.key == pygame.K_v:
                 # Run Verilog simulation
                 print("Running Verilog simulation...")
                 if self.run_verilog_simulation():
                     print("Verilog simulation completed")
+                    # Auto-reload the new VCD file
+                    self.auto_load_vcd()
                 else:
                     print("Verilog simulation failed")
 
             elif event.key == pygame.K_r:
-                # Reset statistics
+                # Reset VCD replay and statistics
+                if self.vcd_parser:
+                    self.vcd_replay_time = 0
+                    print("VCD replay reset to start")
                 for stats in self.router_stats:
                     stats.packets_received = 0
                     stats.packets_sent = 0
@@ -1034,34 +1194,9 @@ class NebulaDashboard:
                 self.performance_history.clear()
                 print("Statistics reset")
 
-            elif event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:
-                # Increase injection rate
-                self.injection_rate = min(1.0, self.injection_rate + 0.05)
-                print(f"Injection rate: {self.injection_rate:.2f}")
-
-            elif event.key == pygame.K_MINUS:
-                # Decrease injection rate
-                self.injection_rate = max(0.0, self.injection_rate - 0.05)
-                print(f"Injection rate: {self.injection_rate:.2f}")
-
             elif event.key == pygame.K_l:
-                # Load VCD file (look for recent one)
-                vcd_paths = [
-                    "../build/tb_nebula_top.vcd",
-                    "../build/obj_dir/tb_nebula_top.vcd",
-                    "../build/nebula_mesh_integration_tb.vcd",
-                    "../build/nebula_router_tb.vcd",
-                ]
-
-                loaded = False
-                for vcd_path in vcd_paths:
-                    if os.path.exists(vcd_path):
-                        if self.load_vcd_file(vcd_path):
-                            loaded = True
-                            break
-
-                if not loaded:
-                    print("No VCD files found or loading failed")
+                # Reload VCD file (look for most recent one)
+                self.auto_load_vcd()
 
             elif event.key == pygame.K_t:
                 # Toggle VCD replay
@@ -1092,16 +1227,89 @@ class NebulaDashboard:
                     self.vcd_replay_time = 0
                     print("VCD replay reset to start")
 
-    def update(self, dt):
-        """Main update loop"""
-        # Process new packets from traffic generation thread
-        try:
-            while True:
-                packet = self.traffic_queue.get_nowait()
-                self.packets.append(packet)
-        except queue.Empty:
-            pass
+            # New traffic configuration controls
+            elif event.key == pygame.K_g:
+                # Generate traffic and run simulation
+                if not TRAFFIC_GENERATOR_AVAILABLE:
+                    print("Traffic generator not available. Please check dependencies.")
+                elif not self.simulation_running:
+                    print("Generating traffic pattern and running simulation...")
+                    self.run_simulation_with_traffic()
+                else:
+                    print("Simulation already running!")
 
+            elif event.key == pygame.K_n:  # Changed from K_p to avoid conflict
+                # Cycle through traffic patterns
+                self.current_pattern_index = (self.current_pattern_index + 1) % len(
+                    self.available_patterns
+                )
+                self.traffic_config["pattern"] = self.available_patterns[
+                    self.current_pattern_index
+                ]
+                print(f"Traffic pattern changed to: {self.traffic_config['pattern']}")
+
+            elif event.key == pygame.K_PLUS or event.key == pygame.K_EQUALS:
+                # Increase injection rate
+                self.traffic_config["injection_rate"] = min(
+                    1.0, self.traffic_config["injection_rate"] + 0.05
+                )
+                print(f"Injection rate: {self.traffic_config['injection_rate']:.2f}")
+
+            elif event.key == pygame.K_MINUS:
+                # Decrease injection rate
+                self.traffic_config["injection_rate"] = max(
+                    0.01, self.traffic_config["injection_rate"] - 0.05
+                )
+                print(f"Injection rate: {self.traffic_config['injection_rate']:.2f}")
+
+            elif event.key == pygame.K_d:
+                # Toggle between duration presets
+                durations = [5000, 10000, 20000, 50000]
+                current_idx = (
+                    durations.index(self.traffic_config["duration_cycles"])
+                    if self.traffic_config["duration_cycles"] in durations
+                    else 0
+                )
+                next_idx = (current_idx + 1) % len(durations)
+                self.traffic_config["duration_cycles"] = durations[next_idx]
+                print(
+                    f"Duration changed to: {self.traffic_config['duration_cycles']} cycles"
+                )
+
+            elif event.key == pygame.K_s:
+                # Toggle packet size between common values
+                sizes = [32, 64, 128, 256, 512]
+                current_idx = (
+                    sizes.index(self.traffic_config["packet_size"])
+                    if self.traffic_config["packet_size"] in sizes
+                    else 1
+                )
+                next_idx = (current_idx + 1) % len(sizes)
+                self.traffic_config["packet_size"] = sizes[next_idx]
+                print(
+                    f"Packet size changed to: {self.traffic_config['packet_size']} bytes"
+                )
+
+            elif event.key == pygame.K_h:
+                # Toggle hotspot mode for applicable patterns
+                if self.traffic_config["pattern"] == "hotspot":
+                    # Cycle through hotspot probabilities
+                    probs = [0.1, 0.3, 0.5, 0.7, 0.9]
+                    current_idx = (
+                        probs.index(self.traffic_config["hotspot_probability"])
+                        if self.traffic_config["hotspot_probability"] in probs
+                        else 1
+                    )
+                    next_idx = (current_idx + 1) % len(probs)
+                    self.traffic_config["hotspot_probability"] = probs[next_idx]
+                    print(
+                        f"Hotspot probability changed to: {self.traffic_config['hotspot_probability']}"
+                    )
+                else:
+                    print("Hotspot controls only available for hotspot pattern")
+
+    def update(self, dt):
+        """Main update loop - VCD replay only"""
         # Update VCD replay if active
         if self.vcd_replay_active and self.vcd_parser:
             self.update_vcd_replay(dt)
@@ -1133,14 +1341,14 @@ class NebulaDashboard:
         time_increment = (
             dt * self.vcd_replay_speed * 1000
         )  # Convert to simulation time units
+        old_time = self.vcd_replay_time
         self.vcd_replay_time += time_increment
 
         # Get packet events within current time window
         current_events = [
             event
             for event in self.vcd_parser.packet_events
-            if event.timestamp <= self.vcd_replay_time
-            and event.timestamp > (self.vcd_replay_time - time_increment)
+            if event.timestamp <= self.vcd_replay_time and event.timestamp > old_time
         ]
 
         # Process events and create visualization packets
@@ -1154,6 +1362,9 @@ class NebulaDashboard:
                 dst_x = random.randint(0, self.mesh_width - 1)
                 dst_y = random.randint(0, self.mesh_height - 1)
 
+                # Calculate proper routing path
+                path = self.xy_routing_path(router_x, router_y, dst_x, dst_y)
+
                 # Get router position for initial packet placement
                 router_pos = self.get_router_position(router_x, router_y)
 
@@ -1164,9 +1375,9 @@ class NebulaDashboard:
                     dst_x=dst_x,
                     dst_y=dst_y,
                     packet_type=random.choice(list(PacketType)),
-                    current_x=router_pos[0],
-                    current_y=router_pos[1],
-                    path=[],
+                    current_x=float(router_pos[0]),
+                    current_y=float(router_pos[1]),
+                    path=path,
                     hop_index=0,
                     timestamp=time.time(),
                     size_flits=1,
@@ -1180,7 +1391,11 @@ class NebulaDashboard:
         # Check if replay has reached the end
         max_time = self.vcd_parser.get_simulation_duration()
         if max_time > 0 and self.vcd_replay_time >= max_time:
-            self.vcd_replay_time = 0  # Loop back to start
+            # Loop back to first packet event
+            if self.vcd_parser.packet_events:
+                self.vcd_replay_time = self.vcd_parser.packet_events[0].timestamp
+            else:
+                self.vcd_replay_time = 0
             print("VCD replay completed, restarting...")
 
     def get_vcd_status_text(self):
@@ -1215,7 +1430,7 @@ class NebulaDashboard:
 
         # Draw subtitle with current status
         vcd_status = self.get_vcd_status_text()
-        subtitle_text = f"Real-time NoC Visualization • Pattern: {self.current_pattern.value} • Rate: {self.injection_rate:.2f} • {vcd_status}"
+        subtitle_text = f"Real-time VCD Replay Visualization • {vcd_status}"
         subtitle = self.font_small.render(subtitle_text, True, COLORS["text_dim"])
         subtitle_rect = subtitle.get_rect(center=(WINDOW_WIDTH // 2, 55))
         self.screen.blit(subtitle, subtitle_rect)
@@ -1224,6 +1439,7 @@ class NebulaDashboard:
         self.draw_mesh_topology()
         self.draw_packets()
         self.draw_controls()
+        self.draw_traffic_config()
         self.draw_statistics()
         self.draw_performance_graphs()
 
@@ -1263,16 +1479,25 @@ class NebulaDashboard:
         """Main application loop"""
         print("Starting Nebula Dashboard...")
         print("Controls:")
-        print("  SPACE - Start/Stop simulation")
+        print("VCD Replay:")
+        print("  SPACE - Start/Stop VCD replay")
         print("  P - Pause/Resume")
-        print("  1-4 - Change traffic patterns")
-        print("  V - Run Verilog simulation")
-        print("  R - Reset statistics")
-        print("  +/- - Adjust injection rate")
         print("  L - Load VCD file")
         print("  T - Toggle VCD replay")
         print("  UP/DOWN - VCD replay speed")
         print("  0 - Reset VCD replay")
+        print("")
+        print("Traffic Generation:")
+        print("  G - Generate traffic & run simulation")
+        print("  N - Change traffic pattern")
+        print("  +/- - Adjust injection rate")
+        print("  D - Change duration")
+        print("  S - Change packet size")
+        print("  H - Hotspot probability (hotspot pattern)")
+        print("")
+        print("General:")
+        print("  V - Run basic Verilog simulation")
+        print("  R - Reset statistics")
 
         while self.running:
             dt = self.clock.tick(FPS) / 1000.0  # Delta time in seconds
@@ -1289,7 +1514,7 @@ class NebulaDashboard:
             self.draw()
 
         # Cleanup
-        self.stop_simulation()
+        self.stop_vcd_replay()
         pygame.quit()
 
 
