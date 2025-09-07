@@ -123,14 +123,14 @@ module nebula_top #(
     return node_id / MESH_WIDTH;
   endfunction
   
-  // Mesh network interconnect signals
-  noc_flit_t mesh_flit_out [NUM_NODES-1:0][NOC_NUM_PORTS-1:0];
-  logic      mesh_valid_out [NUM_NODES-1:0][NOC_NUM_PORTS-1:0];
-  logic      mesh_ready_out [NUM_NODES-1:0][NOC_NUM_PORTS-1:0];
+  // Mesh network interconnect signals - explicit per-router arrays
+  noc_flit_t [NUM_PORTS-1:0] router_flit_in [NUM_NODES-1:0];
+  logic [NUM_PORTS-1:0] router_valid_in [NUM_NODES-1:0];
+  logic [NUM_PORTS-1:0] router_ready_in [NUM_NODES-1:0];
   
-  noc_flit_t mesh_flit_in [NUM_NODES-1:0][NOC_NUM_PORTS-1:0];
-  logic      mesh_valid_in [NUM_NODES-1:0][NOC_NUM_PORTS-1:0];
-  logic      mesh_ready_in [NUM_NODES-1:0][NOC_NUM_PORTS-1:0];
+  noc_flit_t [NUM_PORTS-1:0] router_flit_out [NUM_NODES-1:0];
+  logic [NUM_PORTS-1:0] router_valid_out [NUM_NODES-1:0];
+  logic [NUM_PORTS-1:0] router_ready_out [NUM_NODES-1:0];
   
   // Configuration registers
   logic [CONFIG_DATA_WIDTH-1:0] config_regs [256]; // 256 configuration registers
@@ -138,7 +138,7 @@ module nebula_top #(
   logic [7:0] config_reg_addr;
   
   // Performance monitoring
-  logic [31:0] node_performance_counters [NUM_NODES-1:0][4:0];
+  logic [31:0] node_performance_counters [NUM_NODES-1:0];
   logic [31:0] total_packets_sent;
   logic [31:0] total_packets_received;
   logic [31:0] total_axi_transactions;
@@ -146,7 +146,7 @@ module nebula_top #(
   
   // Error status aggregation
   logic [NUM_NODES-1:0] node_errors;
-  logic [NUM_NODES-1:0] router_errors;
+  error_code_e [NUM_NODES-1:0] router_errors;
   logic [NUM_NODES-1:0] protocol_errors;
   
   // ============================================================================
@@ -162,110 +162,118 @@ module nebula_top #(
       
       // Router instance
       nebula_router #(
-        .ROUTER_ID(i),
-        .X_COORD(NODE_X),
-        .Y_COORD(NODE_Y),
-        .MESH_WIDTH(MESH_WIDTH),
-        .MESH_HEIGHT(MESH_HEIGHT)
+        .ROUTER_X(NODE_X),
+        .ROUTER_Y(NODE_Y),
+        .MESH_SIZE_X(MESH_WIDTH),
+        .MESH_SIZE_Y(MESH_HEIGHT)
       ) router_inst (
         .clk(clk),
         .rst_n(rst_n),
         
         // Input ports [N, S, E, W, Local]
-        .flit_in(mesh_flit_in[i]),
-        .valid_in(mesh_valid_in[i]),
-        .ready_in(mesh_ready_in[i]),
+        .flit_in(router_flit_in[i]),
+        .flit_in_valid(router_valid_in[i]),
+        .flit_in_ready(router_ready_in[i]),
         
         // Output ports [N, S, E, W, Local]
-        .flit_out(mesh_flit_out[i]),
-        .valid_out(mesh_valid_out[i]),
-        .ready_out(mesh_ready_out[i]),
+        .flit_out(router_flit_out[i]),
+        .flit_out_valid(router_valid_out[i]),
+        .flit_out_ready(router_ready_out[i]),
         
         // Performance monitoring
-        .performance_counters(node_performance_counters[i]),
+        .vc_status(),  // Not connected for now
+        .packets_routed(node_performance_counters[i]),
         .error_status(router_errors[i])
       );
       
       // Network Interface Unit (NIU) - connects protocols to local router port
       if (ENABLE_AXI || ENABLE_CHI) begin : gen_niu
         nebula_niu_axi #(
-          .NODE_ID(i),
-          .X_COORD(NODE_X),
-          .Y_COORD(NODE_Y),
-          .ENABLE_AXI(ENABLE_AXI),
-          .ENABLE_CHI(ENABLE_CHI)
+          .NODE_X(NODE_X),
+          .NODE_Y(NODE_Y),
+          .MESH_SIZE_X(MESH_WIDTH),
+          .MESH_SIZE_Y(MESH_HEIGHT)
         ) niu_inst (
           .clk(clk),
           .rst_n(rst_n),
           
           // Local router interface (Local port of router)
-          .noc_flit_out(mesh_flit_in[i][NOC_PORT_LOCAL]),
-          .noc_valid_out(mesh_valid_in[i][NOC_PORT_LOCAL]),
-          .noc_ready_out(mesh_ready_in[i][NOC_PORT_LOCAL]),
+          .noc_flit_out(router_flit_in[i][PORT_LOCAL]),
+          .noc_flit_out_valid(router_valid_in[i][PORT_LOCAL]),
+          .noc_flit_out_ready(router_ready_in[i][PORT_LOCAL]),
           
-          .noc_flit_in(mesh_flit_out[i][NOC_PORT_LOCAL]),
-          .noc_valid_in(mesh_valid_out[i][NOC_PORT_LOCAL]),
-          .noc_ready_in(mesh_ready_out[i][NOC_PORT_LOCAL]),
+          .noc_flit_in(router_flit_out[i][PORT_LOCAL]),
+          .noc_flit_in_valid(router_valid_out[i][PORT_LOCAL]),
+          .noc_flit_in_ready(router_ready_out[i][PORT_LOCAL]),
           
-          // External AXI interface
-          .axi_aw_valid(axi_aw_valid[i]),
-          .axi_aw_ready(axi_aw_ready[i]),
-          .axi_aw(axi_aw[i]),
+          // External AXI interface - connect individual signals
+          .axi_awvalid(axi_aw_valid[i]),
+          .axi_awready(axi_aw_ready[i]),
+          .axi_awid(axi_aw[i].awid),
+          .axi_awaddr(axi_aw[i].awaddr),
+          .axi_awlen(axi_aw[i].awlen),
+          .axi_awsize(axi_aw[i].awsize),
+          .axi_awburst(axi_aw[i].awburst),
+          .axi_awlock(axi_aw[i].awlock),
+          .axi_awcache(axi_aw[i].awcache),
+          .axi_awprot(axi_aw[i].awprot),
+          .axi_awqos(axi_aw[i].awqos),
+          .axi_awregion(axi_aw[i].awregion),
+          .axi_awuser(axi_aw[i].awuser),
           
-          .axi_w_valid(axi_w_valid[i]),
-          .axi_w_ready(axi_w_ready[i]),
-          .axi_w(axi_w[i]),
+          .axi_wvalid(axi_w_valid[i]),
+          .axi_wready(axi_w_ready[i]),
+          .axi_wdata(axi_w[i].wdata),
+          .axi_wstrb(axi_w[i].wstrb),
+          .axi_wlast(axi_w[i].wlast),
+          .axi_wuser(axi_w[i].wuser),
           
-          .axi_b_valid(axi_b_valid[i]),
-          .axi_b_ready(axi_b_ready[i]),
-          .axi_b(axi_b[i]),
+          .axi_bvalid(axi_b_valid[i]),
+          .axi_bready(axi_b_ready[i]),
+          .axi_bid(axi_b[i].bid),
+          .axi_bresp(axi_b[i].bresp),
+          .axi_buser(axi_b[i].buser),
           
-          .axi_ar_valid(axi_ar_valid[i]),
-          .axi_ar_ready(axi_ar_ready[i]),
-          .axi_ar(axi_ar[i]),
+          .axi_arvalid(axi_ar_valid[i]),
+          .axi_arready(axi_ar_ready[i]),
+          .axi_arid(axi_ar[i].arid),
+          .axi_araddr(axi_ar[i].araddr),
+          .axi_arlen(axi_ar[i].arlen),
+          .axi_arsize(axi_ar[i].arsize),
+          .axi_arburst(axi_ar[i].arburst),
+          .axi_arlock(axi_ar[i].arlock),
+          .axi_arcache(axi_ar[i].arcache),
+          .axi_arprot(axi_ar[i].arprot),
+          .axi_arqos(axi_ar[i].arqos),
+          .axi_arregion(axi_ar[i].arregion),
+          .axi_aruser(axi_ar[i].aruser),
           
-          .axi_r_valid(axi_r_valid[i]),
-          .axi_r_ready(axi_r_ready[i]),
-          .axi_r(axi_r[i]),
+          .axi_rvalid(axi_r_valid[i]),
+          .axi_rready(axi_r_ready[i]),
+          .axi_rid(axi_r[i].rid),
+          .axi_rdata(axi_r[i].rdata),
+          .axi_rresp(axi_r[i].rresp),
+          .axi_rlast(axi_r[i].rlast),
+          .axi_ruser(axi_r[i].ruser),
           
-          // External CHI interface
-          .chi_req_valid(chi_req_valid[i]),
-          .chi_req_ready(chi_req_ready[i]),
-          .chi_req(chi_req[i]),
+          // Configuration
+          .global_base_addr(64'h1000_0000 + (i << 20)), // 1MB per node
+          .global_addr_mask(64'hFFF0_0000),
           
-          .chi_resp_valid(chi_resp_valid[i]),
-          .chi_resp_ready(chi_resp_ready[i]),
-          .chi_resp(chi_resp[i]),
-          
-          .chi_dat_req_valid(chi_dat_req_valid[i]),
-          .chi_dat_req_ready(chi_dat_req_ready[i]),
-          .chi_dat_req(chi_dat_req[i]),
-          
-          .chi_dat_resp_valid(chi_dat_resp_valid[i]),
-          .chi_dat_resp_ready(chi_dat_resp_ready[i]),
-          .chi_dat_resp(chi_dat_resp[i]),
-          
-          // Memory interface
-          .mem_req_valid(mem_req_valid[i]),
-          .mem_req_ready(mem_req_ready[i]),
-          .mem_req_addr(mem_req_addr[i]),
-          .mem_req_write(mem_req_write[i]),
-          .mem_req_data(mem_req_data[i]),
-          .mem_req_be(mem_req_be[i]),
-          
-          .mem_resp_valid(mem_resp_valid[i]),
-          .mem_resp_ready(mem_resp_ready[i]),
-          .mem_resp_data(mem_resp_data[i]),
-          .mem_resp_error(mem_resp_error[i]),
-          
-          // Status and errors
-          .protocol_error(protocol_errors[i])
+          // Status outputs
+          .status_reg(), // Not connected for now
+          .error_reg(),  // Not connected for now 
+          .perf_counters(), // Not connected for now
+          .node_info_reg()  // Not connected for now
         );
+        
+        // For now, no protocol errors from NIU
+        assign protocol_errors[i] = 1'b0;
       end else begin : gen_no_niu
         // Tie off unused signals when NIU is disabled
-        assign mesh_flit_in[i][NOC_PORT_LOCAL] = '0;
-        assign mesh_valid_in[i][NOC_PORT_LOCAL] = 1'b0;
-        assign mesh_ready_out[i][NOC_PORT_LOCAL] = 1'b1;
+        assign router_flit_in[i][PORT_LOCAL] = '0;
+        assign router_valid_in[i][PORT_LOCAL] = 1'b0;
+        assign router_ready_out[i][PORT_LOCAL] = 1'b1;
         assign protocol_errors[i] = 1'b0;
       end
     end
@@ -284,52 +292,52 @@ module nebula_top #(
       // North connection
       if (NODE_Y > 0) begin : gen_north_connection
         localparam int NORTH_NODE = (NODE_Y - 1) * MESH_WIDTH + NODE_X;
-        assign mesh_flit_in[i][NOC_PORT_NORTH] = mesh_flit_out[NORTH_NODE][NOC_PORT_SOUTH];
-        assign mesh_valid_in[i][NOC_PORT_NORTH] = mesh_valid_out[NORTH_NODE][NOC_PORT_SOUTH];
-        assign mesh_ready_out[NORTH_NODE][NOC_PORT_SOUTH] = mesh_ready_in[i][NOC_PORT_NORTH];
+        assign router_flit_in[i][PORT_NORTH] = router_flit_out[NORTH_NODE][PORT_SOUTH];
+        assign router_valid_in[i][PORT_NORTH] = router_valid_out[NORTH_NODE][PORT_SOUTH];
+        assign router_ready_out[NORTH_NODE][PORT_SOUTH] = router_ready_in[i][PORT_NORTH];
       end else begin : gen_north_tie_off
-        assign mesh_flit_in[i][NOC_PORT_NORTH] = '0;
-        assign mesh_valid_in[i][NOC_PORT_NORTH] = 1'b0;
+        assign router_flit_in[i][PORT_NORTH] = '0;
+        assign router_valid_in[i][PORT_NORTH] = 1'b0;
       end
       
       // South connection
       if (NODE_Y < MESH_HEIGHT - 1) begin : gen_south_connection
         localparam int SOUTH_NODE = (NODE_Y + 1) * MESH_WIDTH + NODE_X;
-        assign mesh_flit_in[i][NOC_PORT_SOUTH] = mesh_flit_out[SOUTH_NODE][NOC_PORT_NORTH];
-        assign mesh_valid_in[i][NOC_PORT_SOUTH] = mesh_valid_out[SOUTH_NODE][NOC_PORT_NORTH];
-        assign mesh_ready_out[SOUTH_NODE][NOC_PORT_NORTH] = mesh_ready_in[i][NOC_PORT_SOUTH];
+        assign router_flit_in[i][PORT_SOUTH] = router_flit_out[SOUTH_NODE][PORT_NORTH];
+        assign router_valid_in[i][PORT_SOUTH] = router_valid_out[SOUTH_NODE][PORT_NORTH];
+        assign router_ready_out[SOUTH_NODE][PORT_NORTH] = router_ready_in[i][PORT_SOUTH];
       end else begin : gen_south_tie_off
-        assign mesh_flit_in[i][NOC_PORT_SOUTH] = '0;
-        assign mesh_valid_in[i][NOC_PORT_SOUTH] = 1'b0;
+        assign router_flit_in[i][PORT_SOUTH] = '0;
+        assign router_valid_in[i][PORT_SOUTH] = 1'b0;
       end
       
       // East connection
       if (NODE_X < MESH_WIDTH - 1) begin : gen_east_connection
         localparam int EAST_NODE = NODE_Y * MESH_WIDTH + NODE_X + 1;
-        assign mesh_flit_in[i][NOC_PORT_EAST] = mesh_flit_out[EAST_NODE][NOC_PORT_WEST];
-        assign mesh_valid_in[i][NOC_PORT_EAST] = mesh_valid_out[EAST_NODE][NOC_PORT_WEST];
-        assign mesh_ready_out[EAST_NODE][NOC_PORT_WEST] = mesh_ready_in[i][NOC_PORT_EAST];
+        assign router_flit_in[i][PORT_EAST] = router_flit_out[EAST_NODE][PORT_WEST];
+        assign router_valid_in[i][PORT_EAST] = router_valid_out[EAST_NODE][PORT_WEST];
+        assign router_ready_out[EAST_NODE][PORT_WEST] = router_ready_in[i][PORT_EAST];
       end else begin : gen_east_tie_off
-        assign mesh_flit_in[i][NOC_PORT_EAST] = '0;
-        assign mesh_valid_in[i][NOC_PORT_EAST] = 1'b0;
+        assign router_flit_in[i][PORT_EAST] = '0;
+        assign router_valid_in[i][PORT_EAST] = 1'b0;
       end
       
       // West connection
       if (NODE_X > 0) begin : gen_west_connection
         localparam int WEST_NODE = NODE_Y * MESH_WIDTH + NODE_X - 1;
-        assign mesh_flit_in[i][NOC_PORT_WEST] = mesh_flit_out[WEST_NODE][NOC_PORT_EAST];
-        assign mesh_valid_in[i][NOC_PORT_WEST] = mesh_valid_out[WEST_NODE][NOC_PORT_EAST];
-        assign mesh_ready_out[WEST_NODE][NOC_PORT_EAST] = mesh_ready_in[i][NOC_PORT_WEST];
+        assign router_flit_in[i][PORT_WEST] = router_flit_out[WEST_NODE][PORT_EAST];
+        assign router_valid_in[i][PORT_WEST] = router_valid_out[WEST_NODE][PORT_EAST];
+        assign router_ready_out[WEST_NODE][PORT_EAST] = router_ready_in[i][PORT_WEST];
       end else begin : gen_west_tie_off
-        assign mesh_flit_in[i][NOC_PORT_WEST] = '0;
-        assign mesh_valid_in[i][NOC_PORT_WEST] = 1'b0;
+        assign router_flit_in[i][PORT_WEST] = '0;
+        assign router_valid_in[i][PORT_WEST] = 1'b0;
       end
       
       // Handle unused ready signals (edge nodes)
-      if (NODE_Y == 0) assign mesh_ready_out[i][NOC_PORT_NORTH] = 1'b1;
-      if (NODE_Y == MESH_HEIGHT - 1) assign mesh_ready_out[i][NOC_PORT_SOUTH] = 1'b1;
-      if (NODE_X == 0) assign mesh_ready_out[i][NOC_PORT_WEST] = 1'b1;
-      if (NODE_X == MESH_WIDTH - 1) assign mesh_ready_out[i][NOC_PORT_EAST] = 1'b1;
+      if (NODE_Y == 0) assign router_ready_out[i][PORT_NORTH] = 1'b1;
+      if (NODE_Y == MESH_HEIGHT - 1) assign router_ready_out[i][PORT_SOUTH] = 1'b1;
+      if (NODE_X == 0) assign router_ready_out[i][PORT_WEST] = 1'b1;
+      if (NODE_X == MESH_WIDTH - 1) assign router_ready_out[i][PORT_EAST] = 1'b1;
     end
   endgenerate
   
@@ -448,7 +456,9 @@ module nebula_top #(
     if (!rst_n) begin
       node_errors <= '0;
     end else begin
-      node_errors <= router_errors | protocol_errors;
+      for (int i = 0; i < NUM_NODES; i++) begin
+        node_errors[i] <= (router_errors[i] != ERR_NONE) | protocol_errors[i];
+      end
     end
   end
   
@@ -492,10 +502,14 @@ module nebula_top #(
       
       // Find first node with valid outgoing traffic
       for (int i = 0; i < NUM_NODES; i++) begin
-        if (mesh_valid_out[i][NOC_PORT_LOCAL] && mesh_ready_out[i][NOC_PORT_LOCAL] && !trace_valid) begin
+        if (router_valid_out[i][PORT_LOCAL] && router_ready_out[i][PORT_LOCAL] && !trace_valid) begin
           trace_valid <= 1'b1;
           trace_node_id <= i[NODE_ID_WIDTH-1:0];
-          trace_data <= {mesh_flit_out[i][NOC_PORT_LOCAL].header, mesh_flit_out[i][NOC_PORT_LOCAL].payload[31:0]};
+          trace_data <= {router_flit_out[i][PORT_LOCAL].flit_type, 
+                        router_flit_out[i][PORT_LOCAL].vc_id,
+                        router_flit_out[i][PORT_LOCAL].dest_x,
+                        router_flit_out[i][PORT_LOCAL].dest_y,
+                        router_flit_out[i][PORT_LOCAL].payload[31:0]};
         end
       end
     end
@@ -525,8 +539,8 @@ module nebula_top #(
       // Ensure no node has conflicting ready/valid signals
       always @(posedge clk) begin
         if (rst_n) begin
-          for (int p = 0; p < NOC_NUM_PORTS; p++) begin
-            assert (!(mesh_valid_out[i][p] && !mesh_ready_in[i][p] && mesh_ready_out[i][p]))
+          for (int p = 0; p < NUM_PORTS; p++) begin
+            assert (!(router_valid_out[i][p] && !router_ready_in[i][p] && router_ready_out[i][p]))
               else $error("Node %0d port %0d: invalid ready/valid combination", i, p);
           end
         end

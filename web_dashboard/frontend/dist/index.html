@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🚀 Nebula GPU Interconnect Dashboard</title>
+    
+    <script type="module" crossorigin src="/assets/index-b742a94c.js"></script>
+    <link rel="stylesheet" href="/assets/index-3ef54341.css">
+  </head>
+  <body class="bg-gray-100 min-h-screen">
+    <div id="app">
+      <!-- Header -->
+      <header class="bg-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+          <h1 class="text-2xl font-bold">
+            🚀 Nebula GPU Interconnect Dashboard
+          </h1>
+          <p class="text-blue-100">
+            Real-time NoC mesh visualization and simulation
+          </p>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="container mx-auto px-4 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Control Panel -->
+          <div class="lg:col-span-1 space-y-6">
+            <!-- Simulation Controls -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+              <h2 class="text-lg font-semibold mb-4 text-gray-800">
+                🚀 Simulation Controls
+              </h2>
+
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2"
+                    >Traffic Pattern</label
+                  >
+                  <select
+                    id="patternSelect"
+                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="uniform_random">🎲 Uniform Random</option>
+                    <option value="hotspot">🔥 Hotspot</option>
+                    <option value="transpose">↔️ Transpose</option>
+                    <option value="cnn_training">🧠 CNN Training</option>
+                    <option value="matrix_multiply">🔢 Matrix Multiply</option>
+                    <option value="transformer">🤖 Transformer</option>
+                    <option value="tornado">🌪️ Tornado</option>
+                    <option value="bit_complement">📈 Bit Complement</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2"
+                    >Duration (cycles)</label
+                  >
+                  <input
+                    id="durationInput"
+                    type="number"
+                    value="1000"
+                    min="100"
+                    max="10000"
+                    step="100"
+                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <button
+                  id="startSimBtn"
+                  class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  🚀 Run Simulation
+                </button>
+
+                <button
+                  id="cancelSimBtn"
+                  class="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition duration-200 hidden"
+                >
+                  ❌ Cancel Simulation
+                </button>
+              </div>
+
+              <!-- Status Display -->
+              <div id="statusDisplay" class="mt-4 hidden">
+                <div class="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <div class="flex items-center justify-between mb-2">
+                    <span
+                      class="text-sm font-medium text-blue-800"
+                      id="statusText"
+                      >Initializing...</span
+                    >
+                    <span class="text-sm text-blue-600" id="elapsedTime"
+                      >0s</span
+                    >
+                  </div>
+                  <div class="w-full bg-blue-200 rounded-full h-2">
+                    <div
+                      id="progressBar"
+                      class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style="width: 0%"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- VCD File Controls -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+              <h2 class="text-lg font-semibold mb-4 text-gray-800">
+                📁 VCD File Manager
+              </h2>
+
+              <div class="space-y-4">
+                <button
+                  id="refreshVcdBtn"
+                  class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition duration-200"
+                >
+                  🔄 Refresh VCD Files
+                </button>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2"
+                    >Available VCD Files</label
+                  >
+                  <select
+                    id="vcdFileSelect"
+                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Select a VCD file...</option>
+                  </select>
+                </div>
+
+                <button
+                  id="loadVcdBtn"
+                  class="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  disabled
+                >
+                  📊 Load VCD File
+                </button>
+
+                <div id="vcdStatus" class="text-sm text-gray-600 hidden">
+                  <!-- VCD status will be shown here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- VCD Replay Controls -->
+            <div id="vcdReplayControls" class="bg-white rounded-lg shadow-md p-6 hidden">
+              <h2 class="text-lg font-semibold mb-4 text-gray-800">
+                ⏯️ VCD Replay Controls
+              </h2>
+
+              <div class="space-y-4">
+                <div class="text-center">
+                  <div id="vcdEventCount" class="text-sm text-gray-600 mb-2">
+                    No events loaded
+                  </div>
+                  <div id="vcdReplayIndex" class="text-sm text-gray-600 mb-4">
+                    Event 0 of 0
+                  </div>
+                </div>
+
+                <div class="flex space-x-2 justify-center">
+                  <button
+                    onclick="controlVcdReplay('reset')"
+                    class="bg-gray-600 text-white px-3 py-2 rounded-md hover:bg-gray-700 transition duration-200"
+                    title="Reset to beginning"
+                  >
+                    ⏮️
+                  </button>
+                  <button
+                    id="playPauseBtn"
+                    onclick="toggleVcdReplay()"
+                    class="bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition duration-200"
+                    title="Play/Pause animation"
+                  >
+                    ▶️
+                  </button>
+                  <button
+                    onclick="controlVcdReplay('step')"
+                    class="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 transition duration-200"
+                    title="Step forward one event"
+                  >
+                    ⏯️
+                  </button>
+                  <button
+                    onclick="controlVcdReplay('jump', 0)"
+                    class="bg-orange-600 text-white px-3 py-2 rounded-md hover:bg-orange-700 transition duration-200"
+                    title="Jump to start"
+                  >
+                    ⏪
+                  </button>
+                  <button
+                    onclick="jumpToEnd()"
+                    class="bg-red-600 text-white px-3 py-2 rounded-md hover:bg-red-700 transition duration-200"
+                    title="Jump to end"
+                  >
+                    ⏩
+                  </button>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                  <label class="text-sm font-medium text-gray-700">
+                    Speed:
+                  </label>
+                  <input
+                    type="range"
+                    id="speedControl"
+                    min="0.1"
+                    max="5.0"
+                    step="0.1"
+                    value="1.0"
+                    class="flex-1"
+                    oninput="updateReplaySpeed(this.value)"
+                  />
+                  <span id="speedDisplay" class="text-sm text-gray-600">1.0x</span>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Jump to Event:
+                  </label>
+                  <div class="flex space-x-2">
+                    <input
+                      type="number"
+                      id="jumpToEvent"
+                      min="0"
+                      class="flex-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Event index"
+                    />
+                    <button
+                      onclick="jumpToEventIndex()"
+                      class="bg-purple-600 text-white px-3 py-2 rounded-md hover:bg-purple-700 transition duration-200"
+                    >
+                      Go
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Router Statistics -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+              <h2 class="text-lg font-semibold mb-4 text-gray-800">
+                📊 Router Statistics
+              </h2>
+              <div id="routerStats" class="space-y-2">
+                <!-- Router stats will be populated here -->
+              </div>
+            </div>
+
+            <!-- Simulation Log -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+              <h2 class="text-lg font-semibold mb-4 text-gray-800">
+                📝 Simulation Log
+              </h2>
+              <div
+                id="simulationLog"
+                class="h-32 overflow-y-auto bg-gray-50 p-3 rounded text-sm font-mono"
+              >
+                <div class="text-gray-500">Ready to start simulation...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Visualization Panel -->
+          <div class="lg:col-span-2 space-y-6">
+            <!-- Mesh Visualization -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+              <h2 class="text-lg font-semibold mb-4 text-gray-800">
+                🕸️ NoC Mesh Topology
+              </h2>
+              <div
+                id="meshVisualization"
+                class="relative bg-gray-50 rounded-lg p-4 min-h-96"
+              >
+                <!-- SVG mesh will be rendered here -->
+              </div>
+            </div>
+
+            <!-- Performance Charts -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+              <h2 class="text-lg font-semibold mb-4 text-gray-800">
+                📈 Performance Metrics
+              </h2>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    Packet Count
+                  </h3>
+                  <div
+                    id="packetCount"
+                    class="text-2xl font-bold text-blue-600"
+                  >
+                    0
+                  </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    Avg Utilization
+                  </h3>
+                  <div
+                    id="avgUtilization"
+                    class="text-2xl font-bold text-green-600"
+                  >
+                    0%
+                  </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    Max Congestion
+                  </h3>
+                  <div
+                    id="maxCongestion"
+                    class="text-2xl font-bold text-red-600"
+                  >
+                    0%
+                  </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    Temperature
+                  </h3>
+                  <div
+                    id="avgTemperature"
+                    class="text-2xl font-bold text-orange-600"
+                  >
+                    25°C
+                  </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    VCD Events
+                  </h3>
+                  <div
+                    id="vcdEventsTotal"
+                    class="text-2xl font-bold text-purple-600"
+                  >
+                    0
+                  </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    VCD Progress
+                  </h3>
+                  <div
+                    id="vcdProgress"
+                    class="text-2xl font-bold text-indigo-600"
+                  >
+                    0%
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Performance Graphs -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+              <h2 class="text-lg font-semibold mb-4 text-gray-800">
+                📊 Performance Graphs
+              </h2>
+              <div class="space-y-4">
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    Network Utilization Over Time
+                  </h3>
+                  <canvas id="utilizationChart" width="300" height="100"></canvas>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    Congestion Level
+                  </h3>
+                  <canvas id="congestionChart" width="300" height="100"></canvas>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    Active Packets
+                  </h3>
+                  <canvas id="packetChart" width="300" height="100"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Connection Status -->
+    <div
+      id="connectionStatus"
+      class="fixed bottom-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm hidden"
+    >
+      🟢 Connected
+    </div>
+
+    
+  </body>
+</html>

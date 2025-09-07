@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+.router-node {
+    transition: all 0.3s ease;
+}
+
+.router-node:hover {
+    transform: scale(1.1);
+}
+
+.packet-animation {
+    animation: packetMove 0.5s ease-in-out;
+}
+
+@keyframes packetMove {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
+.connection-line {
+    stroke: #9ca3af;
+    stroke-width: 2;
+}
+
+.mesh-grid {
+    background-image: 
+        linear-gradient(to right, #f3f4f6 1px, transparent 1px),
+        linear-gradient(to bottom, #f3f4f6 1px, transparent 1px);
+    background-size: 20px 20px;
+}

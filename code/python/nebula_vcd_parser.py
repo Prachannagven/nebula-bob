@@ -168,8 +168,28 @@ class SimpleVCDParser:
             full_name = self.signal_hierarchy.get(sig_id, signal.name).lower()
 
             # Extract router information from hierarchical names
-            # Look for patterns like: tb_nebula_top.dut.gen_mesh_nodes[0].router_inst.flit_out_valid
-            router_match = re.search(r"gen_mesh_nodes\[(\d+)\].*router_inst", full_name)
+            # Look for patterns like: router_flit_in[0], router_flit_out[0], etc.
+            router_match = re.search(r"router_flit_(?:in|out)\[(\d+)\]", full_name)
+            if router_match:
+                router_id = int(router_match.group(1))
+                
+                if router_id not in router_signals:
+                    router_signals[router_id] = {}
+
+                # Look for flit valid and data signals
+                if "router_flit_in_valid" in full_name:
+                    router_signals[router_id]["input_valid"] = sig_id
+                elif "router_flit_out_valid" in full_name:
+                    router_signals[router_id]["output_valid"] = sig_id
+                elif "router_flit_in[" in full_name and "valid" not in full_name:
+                    router_signals[router_id]["input_flit"] = sig_id
+                elif "router_flit_out[" in full_name and "valid" not in full_name:
+                    router_signals[router_id]["output_flit"] = sig_id
+                continue
+
+            # Also look for the old pattern in case it exists
+            # Look for patterns like: tb_nebula_top.dut.gen_nodes[0].router_inst.flit_out_valid
+            router_match = re.search(r"gen_(?:mesh_)?nodes?\[(\d+)\].*router", full_name)
             if not router_match:
                 continue
 

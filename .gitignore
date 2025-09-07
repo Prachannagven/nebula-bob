@@ -72,3 +72,66 @@ sim/
 synth/
 impl/
 
+# Python cache and virtual environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.venv/
+venv/
+env/
+ENV/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-*
+.atom/
+
+# Log files and temporary data
+logs/
+*.log
+*.tmp
+*.temp
+
+# Generated testbenches and build artifacts
+tb_generated/
+*.backup
+*.bak
+
+# Node.js (for frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# SystemC and C++ build files
+*.o
+*.so
+*.a
+*.out
+*.exe
+Vtb_*
+verilated*
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Operating system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
