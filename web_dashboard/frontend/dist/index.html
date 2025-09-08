@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nebula GPU Interconnect Dashboard</title>
     
-    <script type="module" crossorigin src="/assets/index-22ec839a.js"></script>
-    <link rel="stylesheet" href="/assets/index-6ce483cb.css">
+    <script type="module" crossorigin src="/assets/index-eaffec36.js"></script>
+    <link rel="stylesheet" href="/assets/index-ff139388.css">
   </head>
   <body
     class="bg-gray-50 dark:bg-gray-950 min-h-screen transition-all duration-300"
@@ -344,7 +344,9 @@
                 </div>
 
                 <div class="flex items-center space-x-2">
-                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
                     Speed:
                   </label>
                   <input
@@ -357,7 +359,9 @@
                     class="flex-1 slider accent-blue-600 dark:accent-blue-500"
                     oninput="updateReplaySpeed(this.value)"
                   />
-                  <span id="speedDisplay" class="text-sm text-gray-600 dark:text-gray-400 font-medium"
+                  <span
+                    id="speedDisplay"
+                    class="text-sm text-gray-600 dark:text-gray-400 font-medium"
                     >1.0x</span
                   >
                 </div>
@@ -389,7 +393,9 @@
             <div
               class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 transition-all duration-300"
             >
-              <h2 class="text-lg font-semibold mb-6 text-gray-900 dark:text-gray-100">
+              <h2
+                class="text-lg font-semibold mb-6 text-gray-900 dark:text-gray-100"
+              >
                 Router Statistics
               </h2>
               <div id="routerStats" class="space-y-3">
@@ -401,14 +407,18 @@
             <div
               class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 transition-all duration-300"
             >
-              <h2 class="text-lg font-semibold mb-6 text-gray-900 dark:text-gray-100">
+              <h2
+                class="text-lg font-semibold mb-6 text-gray-900 dark:text-gray-100"
+              >
                 Simulation Log
               </h2>
               <div
                 id="simulationLog"
                 class="h-32 overflow-y-auto bg-gray-50 dark:bg-gray-800 p-4 rounded-lg text-sm font-mono border border-gray-200 dark:border-gray-700"
               >
-                <div class="text-gray-500 dark:text-gray-400">Ready to start simulation...</div>
+                <div class="text-gray-500 dark:text-gray-400">
+                  Ready to start simulation...
+                </div>
               </div>
             </div>
           </div>
@@ -416,7 +426,7 @@
           <!-- Visualization Panel -->
           <div class="xl:col-span-3 space-y-6">
             <!-- Main visualization row -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 gap-6">
               <!-- Mesh Visualization -->
               <div
                 class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 transition-all duration-300"
@@ -431,47 +441,6 @@
                   class="relative bg-gray-50 dark:bg-gray-800 rounded-lg p-6 min-h-96 border border-gray-200 dark:border-gray-700"
                 >
                   <!-- SVG mesh will be rendered here -->
-                </div>
-              </div>
-
-              <!-- Performance Graphs -->
-              <div
-                class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 transition-all duration-300"
-              >
-                <h2
-                  class="text-lg font-semibold mb-6 text-gray-900 dark:text-gray-100"
-                >
-                  Performance Graphs
-                </h2>
-                <div class="space-y-4">
-                  <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                      Network Utilization Over Time
-                    </h3>
-                    <canvas
-                      id="utilizationChart"
-                      width="300"
-                      height="80"
-                      class="w-full"
-                    ></canvas>
-                  </div>
-                  <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                      Congestion Level
-                    </h3>
-                    <canvas
-                      id="congestionChart"
-                      width="300"
-                      height="80"
-                      class="w-full"
-                    ></canvas>
-                  </div>
-                  <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                      Active Packets
-                    </h3>
-                    <canvas id="packetChart" width="300" height="80" class="w-full"></canvas>
-                  </div>
                 </div>
               </div>
             </div>
@@ -516,8 +485,12 @@
                     0
                   </div>
                 </div>
-                                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
                     Completed Packets
                   </h3>
                   <div
@@ -527,8 +500,12 @@
                     0
                   </div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
                     Avg Latency
                   </h3>
                   <div
@@ -538,16 +515,27 @@
                     0ns
                   </div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
                     Throughput
                   </h3>
-                  <div id="throughput" class="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
+                  <div
+                    id="throughput"
+                    class="text-2xl font-bold text-cyan-600 dark:text-cyan-400"
+                  >
                     0 pkt/s
                   </div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
                     Mesh Utilization
                   </h3>
                   <div
@@ -557,108 +545,108 @@
                     0%
                   </div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Packet Count (Legacy)
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Active Packets
                   </h3>
                   <div
-                    id="packetCount"
+                    id="activePackets"
                     class="text-2xl font-bold text-blue-600 dark:text-blue-400"
                   >
                     0
                   </div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Avg Utilization (Legacy)
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Completed Packets
                   </h3>
                   <div
-                    id="avgUtilization"
+                    id="completedPackets"
                     class="text-2xl font-bold text-green-600 dark:text-green-400"
-                  >
-                    0%
-                  </div>
-                </div>
-                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Max Congestion
-                  </h3>
-                  <div
-                    id="maxCongestion"
-                    class="text-2xl font-bold text-red-600 dark:text-red-400"
-                  >
-                    0%
-                  </div>
-                </div>
-                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Temperature
-                  </h3>
-                  <div
-                    id="avgTemperature"
-                    class="text-2xl font-bold text-orange-600 dark:text-orange-400"
-                  >
-                    25°C
-                  </div>
-                </div>
-                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    VCD Events
-                  </h3>
-                  <div
-                    id="vcdEventsTotal"
-                    class="text-2xl font-bold text-purple-600 dark:text-purple-400"
                   >
                     0
                   </div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    VCD Progress
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Total Packets
                   </h3>
                   <div
-                    id="vcdProgress"
-                    class="text-2xl font-bold text-indigo-600 dark:text-indigo-400"
+                    id="totalPackets"
+                    class="text-2xl font-bold text-purple-600 dark:text-purple-400"
                   >
-                    0%
+                    0
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- Performance Graphs -->
-            <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 transition-all duration-300">
-              <h2 class="text-lg font-semibold mb-6 text-gray-900 dark:text-gray-100">
+            <div
+              class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 transition-all duration-300"
+            >
+              <h2
+                class="text-lg font-semibold mb-6 text-gray-900 dark:text-gray-100"
+              >
                 Performance Graphs
               </h2>
               <div class="space-y-6">
-                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
+                  >
                     Network Utilization Over Time
                   </h3>
                   <canvas
                     id="utilizationChart"
-                    width="300"
-                    height="100"
+                    width="800"
+                    height="300"
                     class="w-full"
                   ></canvas>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
+                  >
                     Congestion Level
                   </h3>
                   <canvas
                     id="congestionChart"
-                    width="300"
-                    height="100"
+                    width="800"
+                    height="300"
                     class="w-full"
                   ></canvas>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
+                  >
                     Active Packets
                   </h3>
-                  <canvas id="packetChart" width="300" height="100" class="w-full"></canvas>
+                  <canvas
+                    id="packetChart"
+                    width="800"
+                    height="300"
+                    class="w-full"
+                  ></canvas>
                 </div>
               </div>
             </div>

@@ -35,26 +35,22 @@ class TrafficPattern(Enum):
     """Supported traffic patterns"""
 
     UNIFORM_RANDOM = "uniform_random"
-    HOTSPOT = "hotspot"
-    TRANSPOSE = "transpose"
-    BIT_REVERSE = "bit_reverse"
     CNN_TRAINING = "cnn_training"
-    MATRIX_MULTIPLY = "matrix_multiply"
-    TRANSFORMER = "transformer"
-    TORNADO = "tornado"
-    BIT_COMPLEMENT = "bit_complement"
 
 
 @dataclass
 class TrafficConfig:
     """Configuration for traffic generation"""
 
-    mesh_width: int = 4
-    mesh_height: int = 4
+    mesh_width: int = 8
+    mesh_height: int = 8
     pattern: TrafficPattern = TrafficPattern.UNIFORM_RANDOM
     injection_rate: float = 0.1  # Packets per node per cycle
     duration_cycles: int = 1000
-    packet_size_bytes: int = 64
+    packet_size_bytes: int = 128  # More realistic cache-line size
+    packet_size_distribution: str = "mixed"  # "fixed", "mixed", "realistic"
+    min_packet_size: int = 32
+    max_packet_size: int = 1024
     hotspot_nodes: List[int] = None
     hotspot_probability: float = 0.3
     enable_chi: bool = True
@@ -91,6 +87,42 @@ class NebulaTrafficGenerator:
         )
         logger.info(f"Pattern: {config.pattern.value}")
         logger.info(f"Injection rate: {config.injection_rate}")
+
+    def get_realistic_packet_size(self, packet_type: str = "AXI_READ") -> int:
+        """Generate realistic packet size based on GPU workload characteristics"""
+
+        if self.config.packet_size_distribution == "fixed":
+            return self.config.packet_size_bytes
+
+        elif self.config.packet_size_distribution == "realistic":
+            # Realistic GPU packet size distribution
+            rand_val = self.random.random()
+
+            if packet_type in ["CHI_READ", "CHI_WRITE"]:
+                # Cache coherency traffic - typically cache line sized
+                if rand_val < 0.7:  # 70% cache line (64B or 128B)
+                    return self.random.choice([64, 128])
+                elif rand_val < 0.9:  # 20% small control packets
+                    return self.random.choice([32, 48])
+                else:  # 10% larger coherency data
+                    return self.random.choice([256, 512])
+
+            elif packet_type in ["AXI_READ", "AXI_WRITE"]:
+                # Memory access patterns - more varied
+                if rand_val < 0.4:  # 40% small/medium (registers, small data)
+                    return self.random.choice([64, 128, 256])
+                elif rand_val < 0.7:  # 30% medium (texture, compute data)
+                    return self.random.choice([512, 1024])
+                elif rand_val < 0.9:  # 20% large (bulk transfers)
+                    return self.random.choice([2048, 4096])
+                else:  # 10% very large (model weights, large textures)
+                    return min(8192, self.config.max_packet_size)
+
+        else:  # "mixed" - simple distribution
+            # Weighted toward common cache line sizes but with variety
+            choices = [32, 64, 128, 256, 512, 1024]
+            weights = [5, 20, 30, 25, 15, 5]  # Favor 64B and 128B
+            return self.random.choices(choices, weights=weights)[0]
 
     def node_to_coords(self, node_id: int) -> Tuple[int, int]:
         """Convert node ID to (x, y) coordinates"""
@@ -131,7 +163,7 @@ class NebulaTrafficGenerator:
                         source_node=src_node,
                         dest_node=dst_node,
                         packet_id=packet_id,
-                        size_bytes=self.config.packet_size_bytes,
+                        size_bytes=self.get_realistic_packet_size(packet_type),
                         packet_type=packet_type,
                     )
                     traces.append(trace)
@@ -140,114 +172,79 @@ class NebulaTrafficGenerator:
         logger.info(f"Generated {len(traces)} uniform random packets")
         return traces
 
-    def generate_hotspot_traffic(self) -> List[PacketTrace]:
-        """Generate hotspot traffic pattern"""
-        logger.info("Generating hotspot traffic pattern")
-        traces = []
-        packet_id = 0
-
-        # Default hotspot nodes if not specified
-        hotspot_nodes = self.config.hotspot_nodes or [
-            0,
-            self.num_nodes // 2,
-            self.num_nodes - 1,
-        ]
-
-        for cycle in range(self.config.duration_cycles):
-            for src_node in range(self.num_nodes):
-                if self.random.random() < self.config.injection_rate:
-                    # Choose destination: hotspot with configured probability
-                    if self.random.random() < self.config.hotspot_probability:
-                        dst_node = self.random.choice(hotspot_nodes)
-                    else:
-                        dst_node = self.random.choice(
-                            [n for n in range(self.num_nodes) if n != src_node]
-                        )
-
-                    packet_type = self.random.choice(
-                        ["AXI_READ", "AXI_WRITE", "CHI_READ", "CHI_WRITE"]
-                    )
-
-                    trace = PacketTrace(
-                        timestamp=cycle,
-                        source_node=src_node,
-                        dest_node=dst_node,
-                        packet_id=packet_id,
-                        size_bytes=self.config.packet_size_bytes,
-                        packet_type=packet_type,
-                    )
-                    traces.append(trace)
-                    packet_id += 1
-
-        logger.info(f"Generated {len(traces)} hotspot packets")
-        return traces
-
-    def generate_transpose_traffic(self) -> List[PacketTrace]:
-        """Generate transpose traffic pattern"""
-        logger.info("Generating transpose traffic pattern")
-        traces = []
-        packet_id = 0
-
-        for cycle in range(self.config.duration_cycles):
-            for src_node in range(self.num_nodes):
-                if self.random.random() < self.config.injection_rate:
-                    # Transpose: (x,y) -> (y,x)
-                    src_x, src_y = self.node_to_coords(src_node)
-                    dst_x, dst_y = src_y, src_x
-
-                    # Ensure destination is within bounds
-                    if (
-                        dst_x < self.config.mesh_width
-                        and dst_y < self.config.mesh_height
-                    ):
-                        dst_node = self.coords_to_node(dst_x, dst_y)
-
-                        packet_type = self.random.choice(["AXI_READ", "AXI_WRITE"])
-
-                        trace = PacketTrace(
-                            timestamp=cycle,
-                            source_node=src_node,
-                            dest_node=dst_node,
-                            packet_id=packet_id,
-                            size_bytes=self.config.packet_size_bytes,
-                            packet_type=packet_type,
-                        )
-                        traces.append(trace)
-                        packet_id += 1
-
-        logger.info(f"Generated {len(traces)} transpose packets")
-        return traces
-
     def generate_cnn_training_traffic(self) -> List[PacketTrace]:
-        """Generate CNN training workload pattern"""
-        logger.info("Generating CNN training traffic pattern")
+        """Generate realistic CNN training workload pattern based on actual GPU behavior"""
+        logger.info("Generating realistic CNN training traffic pattern")
         traces = []
         packet_id = 0
 
-        # CNN training phases
-        phase_duration = self.config.duration_cycles // 3
+        # Realistic CNN training configuration
+        batch_size = 32  # Typical batch size
+        num_layers = 50  # ResNet-50 style
 
-        for cycle in range(self.config.duration_cycles):
-            phase = cycle // phase_duration
+        # Training phases with realistic durations
+        forward_cycles = int(self.config.duration_cycles * 0.35)  # 35% forward pass
+        backward_cycles = int(self.config.duration_cycles * 0.45)  # 45% backward pass
+        allreduce_cycles = int(self.config.duration_cycles * 0.15)  # 15% all-reduce
+        optimizer_cycles = (
+            self.config.duration_cycles
+            - forward_cycles
+            - backward_cycles
+            - allreduce_cycles
+        )  # 5% optimizer
+
+        cycle_offset = 0
+
+        # PHASE 1: FORWARD PASS - Data parallel computation with memory reads
+        logger.info("Generating forward pass traffic (data loading + computation)")
+        for cycle in range(forward_cycles):
+            actual_cycle = cycle + cycle_offset
 
             for src_node in range(self.num_nodes):
-                injection_prob = self.config.injection_rate
+                # Forward pass characteristics:
+                # - High memory read activity (weights, activations)
+                # - Layer-by-layer processing creates waves of activity
+                # - Inter-node communication for feature maps
 
-                # Adjust injection based on phase
-                if phase == 0:  # Forward pass
-                    injection_prob *= 0.8
-                elif phase == 1:  # Backward pass
-                    injection_prob *= 1.2
-                else:  # Weight update/all-reduce
-                    injection_prob *= 0.6
+                layer_progress = (cycle / forward_cycles) * num_layers
+                current_layer = int(layer_progress) % num_layers
 
-                if self.random.random() < injection_prob:
-                    if phase <= 1:  # Forward/backward - local communication
+                # Higher activity during conv layers (every 2-3 layers)
+                is_conv_layer = (current_layer % 3) <= 1
+                base_injection = self.config.injection_rate * (
+                    1.5 if is_conv_layer else 0.7
+                )
+
+                # Memory access patterns
+                if self.random.random() < base_injection:
+                    rand_val = self.random.random()
+
+                    if rand_val < 0.6:  # 60% - Weight/bias reads from memory nodes
+                        # Memory nodes are typically at edges (simplified model)
+                        memory_nodes = [
+                            0,
+                            self.config.mesh_width - 1,
+                            self.num_nodes - self.config.mesh_width,
+                            self.num_nodes - 1,
+                        ]
+                        dst_node = self.random.choice(memory_nodes)
+                        packet_type = "AXI_READ"
+                        # Weight reads are typically larger (filter weights, bias)
+                        packet_size = self.random.choice([512, 1024, 2048, 4096])
+
+                    elif (
+                        rand_val < 0.85
+                    ):  # 25% - Activation data between nearby compute nodes
                         src_x, src_y = self.node_to_coords(src_node)
-                        # Prefer communication with nearby nodes
                         neighbors = []
-                        for dx in [-1, 0, 1]:
-                            for dy in [-1, 0, 1]:
+                        for dx in [
+                            -2,
+                            -1,
+                            0,
+                            1,
+                            2,
+                        ]:  # Wider neighborhood for feature maps
+                            for dy in [-2, -1, 0, 1, 2]:
                                 nx, ny = src_x + dx, src_y + dy
                                 if (
                                     0 <= nx < self.config.mesh_width
@@ -256,32 +253,217 @@ class NebulaTrafficGenerator:
                                 ):
                                     neighbors.append(self.coords_to_node(nx, ny))
 
-                        if neighbors:
-                            dst_node = self.random.choice(neighbors)
-                        else:
-                            dst_node = self.random.choice(
-                                [n for n in range(self.num_nodes) if n != src_node]
-                            )
-                    else:  # All-reduce - global communication
+                        dst_node = (
+                            self.random.choice(neighbors) if neighbors else src_node
+                        )
+                        packet_type = "CHI_READ"  # Cache coherent activation sharing
+                        packet_size = self.random.choice(
+                            [256, 512, 1024]
+                        )  # Feature map chunks
+
+                    else:  # 15% - Control and metadata
                         dst_node = self.random.choice(
                             [n for n in range(self.num_nodes) if n != src_node]
                         )
+                        packet_type = "CHI_READ"
+                        packet_size = self.random.choice([64, 128])
 
-                    packet_type = "AXI_WRITE" if phase == 0 else "AXI_READ"
-
-                    trace = PacketTrace(
-                        timestamp=cycle,
-                        source_node=src_node,
-                        dest_node=dst_node,
-                        packet_id=packet_id,
-                        size_bytes=self.config.packet_size_bytes
-                        * (2 if phase == 2 else 1),
-                        packet_type=packet_type,
+                    traces.append(
+                        PacketTrace(
+                            timestamp=actual_cycle,
+                            source_node=src_node,
+                            dest_node=dst_node,
+                            packet_id=packet_id,
+                            size_bytes=packet_size,
+                            packet_type=packet_type,
+                            priority=1 if is_conv_layer else 0,
+                        )
                     )
-                    traces.append(trace)
                     packet_id += 1
 
-        logger.info(f"Generated {len(traces)} CNN training packets")
+        cycle_offset += forward_cycles
+
+        # PHASE 2: BACKWARD PASS - Gradient computation with high write activity
+        logger.info("Generating backward pass traffic (gradient computation)")
+        for cycle in range(backward_cycles):
+            actual_cycle = cycle + cycle_offset
+
+            for src_node in range(self.num_nodes):
+                # Backward pass characteristics:
+                # - Reverse layer order processing
+                # - High write activity (gradients)
+                # - More intensive communication than forward pass
+
+                layer_progress = (
+                    (backward_cycles - cycle) / backward_cycles
+                ) * num_layers
+                current_layer = int(layer_progress) % num_layers
+
+                # Gradient computation is computationally intensive
+                is_gradient_intensive = (current_layer % 4) <= 2  # 75% of layers
+                base_injection = self.config.injection_rate * (
+                    1.8 if is_gradient_intensive else 1.0
+                )
+
+                if self.random.random() < base_injection:
+                    rand_val = self.random.random()
+
+                    if rand_val < 0.45:  # 45% - Gradient writes to accumulation buffers
+                        # Gradients often accumulated in specific nodes
+                        accumulator_nodes = [
+                            n for n in range(0, self.num_nodes, 4)
+                        ]  # Every 4th node
+                        dst_node = self.random.choice(accumulator_nodes)
+                        packet_type = "AXI_WRITE"
+                        # Gradients can be quite large (especially for FC layers)
+                        packet_size = self.random.choice([1024, 2048, 4096, 8192])
+
+                    elif rand_val < 0.7:  # 25% - Activation gradient propagation
+                        src_x, src_y = self.node_to_coords(src_node)
+                        # Backward propagation follows reverse direction
+                        backward_neighbors = []
+                        for dx in [-1, 0, 1]:
+                            for dy in [-1, 0, 1]:
+                                nx, ny = src_x + dx, src_y + dy
+                                if (
+                                    0 <= nx < self.config.mesh_width
+                                    and 0 <= ny < self.config.mesh_height
+                                    and (dx != 0 or dy != 0)
+                                ):
+                                    backward_neighbors.append(
+                                        self.coords_to_node(nx, ny)
+                                    )
+
+                        dst_node = (
+                            self.random.choice(backward_neighbors)
+                            if backward_neighbors
+                            else src_node
+                        )
+                        packet_type = "CHI_WRITE"
+                        packet_size = self.random.choice([512, 1024, 2048])
+
+                    else:  # 30% - Memory reads for cached activations/weights
+                        memory_nodes = [
+                            0,
+                            self.config.mesh_width - 1,
+                            self.num_nodes - self.config.mesh_width,
+                            self.num_nodes - 1,
+                        ]
+                        dst_node = self.random.choice(memory_nodes)
+                        packet_type = "AXI_READ"
+                        packet_size = self.random.choice([256, 512, 1024])
+
+                    traces.append(
+                        PacketTrace(
+                            timestamp=actual_cycle,
+                            source_node=src_node,
+                            dest_node=dst_node,
+                            packet_id=packet_id,
+                            size_bytes=packet_size,
+                            packet_type=packet_type,
+                            priority=2 if is_gradient_intensive else 1,
+                        )
+                    )
+                    packet_id += 1
+
+        cycle_offset += backward_cycles
+
+        # PHASE 3: ALL-REDUCE - Global gradient synchronization (most communication intensive)
+        logger.info("Generating all-reduce traffic (gradient synchronization)")
+        for cycle in range(allreduce_cycles):
+            actual_cycle = cycle + cycle_offset
+
+            # All-reduce follows ring or tree topology for bandwidth efficiency
+            allreduce_progress = cycle / allreduce_cycles
+
+            for src_node in range(self.num_nodes):
+                # All-reduce is extremely communication intensive
+                base_injection = self.config.injection_rate * 2.5
+
+                if self.random.random() < base_injection:
+                    # Ring all-reduce: each node communicates with neighbors in ring
+                    if allreduce_progress < 0.5:  # Reduce-scatter phase
+                        # Send to next node in ring
+                        dst_node = (src_node + 1) % self.num_nodes
+                        packet_type = "AXI_WRITE"
+                        # Large gradient chunks
+                        packet_size = self.random.choice([4096, 8192, 16384])
+
+                    else:  # All-gather phase
+                        # Receive from previous node in ring
+                        dst_node = (src_node - 1) % self.num_nodes
+                        packet_type = "AXI_READ"
+                        packet_size = self.random.choice([4096, 8192, 16384])
+
+                    traces.append(
+                        PacketTrace(
+                            timestamp=actual_cycle,
+                            source_node=src_node,
+                            dest_node=dst_node,
+                            packet_id=packet_id,
+                            size_bytes=min(packet_size, self.config.max_packet_size),
+                            packet_type=packet_type,
+                            priority=3,  # Highest priority
+                        )
+                    )
+                    packet_id += 1
+
+        cycle_offset += allreduce_cycles
+
+        # PHASE 4: OPTIMIZER UPDATE - Weight updates with memory writes
+        logger.info("Generating optimizer update traffic (weight updates)")
+        for cycle in range(optimizer_cycles):
+            actual_cycle = cycle + cycle_offset
+
+            for src_node in range(self.num_nodes):
+                # Optimizer updates are less communication intensive but involve large writes
+                base_injection = self.config.injection_rate * 0.8
+
+                if self.random.random() < base_injection:
+                    rand_val = self.random.random()
+
+                    if rand_val < 0.7:  # 70% - Weight updates to memory
+                        memory_nodes = [
+                            0,
+                            self.config.mesh_width - 1,
+                            self.num_nodes - self.config.mesh_width,
+                            self.num_nodes - 1,
+                        ]
+                        dst_node = self.random.choice(memory_nodes)
+                        packet_type = "AXI_WRITE"
+                        # Updated weights and optimizer states (Adam: weights + momentum + variance)
+                        packet_size = self.random.choice([2048, 4096, 8192])
+
+                    else:  # 30% - Optimizer state reads
+                        memory_nodes = [
+                            0,
+                            self.config.mesh_width - 1,
+                            self.num_nodes - self.config.mesh_width,
+                            self.num_nodes - 1,
+                        ]
+                        dst_node = self.random.choice(memory_nodes)
+                        packet_type = "AXI_READ"
+                        packet_size = self.random.choice([1024, 2048, 4096])
+
+                    traces.append(
+                        PacketTrace(
+                            timestamp=actual_cycle,
+                            source_node=src_node,
+                            dest_node=dst_node,
+                            packet_id=packet_id,
+                            size_bytes=packet_size,
+                            packet_type=packet_type,
+                            priority=0,  # Lower priority
+                        )
+                    )
+                    packet_id += 1
+
+        logger.info(f"Generated {len(traces)} realistic CNN training packets")
+        logger.info(f"  Forward pass: {forward_cycles} cycles")
+        logger.info(f"  Backward pass: {backward_cycles} cycles")
+        logger.info(f"  All-reduce: {allreduce_cycles} cycles")
+        logger.info(f"  Optimizer: {optimizer_cycles} cycles")
+
         return traces
 
     def generate_pattern_traces(self, pattern: TrafficPattern) -> List[PacketTrace]:
@@ -289,10 +471,6 @@ class NebulaTrafficGenerator:
 
         if pattern == TrafficPattern.UNIFORM_RANDOM:
             return self.generate_uniform_random_traffic()
-        elif pattern == TrafficPattern.HOTSPOT:
-            return self.generate_hotspot_traffic()
-        elif pattern == TrafficPattern.TRANSPOSE:
-            return self.generate_transpose_traffic()
         elif pattern == TrafficPattern.CNN_TRAINING:
             return self.generate_cnn_training_traffic()
         else:
@@ -702,6 +880,20 @@ endmodule
         testbench_path = os.path.join(output_dir, f"tb_nebula_{pattern.value}.sv")
         self.generate_vcd_testbench(testbench_path, traces)
 
+        # Create a standard symlink for the Makefile to use
+        standard_link = os.path.join(output_dir, "tb_nebula_current.sv")
+        if os.path.exists(standard_link):
+            os.remove(standard_link)
+        try:
+            os.symlink(os.path.basename(testbench_path), standard_link)
+            logger.info(f"Created standard link: {standard_link}")
+        except OSError:
+            # If symlinks not supported, copy the file
+            import shutil
+
+            shutil.copy2(testbench_path, standard_link)
+            logger.info(f"Created standard copy: {standard_link}")
+
         # Generate stimulus file for reference
         stimulus_path = os.path.join(output_dir, f"stimulus_{pattern.value}.txt")
         self.generate_stimulus_file(stimulus_path, traces)
@@ -734,7 +926,10 @@ def main():
         pattern=TrafficPattern.UNIFORM_RANDOM,
         injection_rate=0.1,
         duration_cycles=1000,
-        packet_size_bytes=64,
+        packet_size_bytes=128,  # More realistic default
+        packet_size_distribution="realistic",  # Use realistic size distribution
+        min_packet_size=32,
+        max_packet_size=4096,
         enable_axi=True,
         enable_chi=True,
     )

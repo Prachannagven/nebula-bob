@@ -3,8 +3,8 @@
 module tb_nebula_traffic_pattern();
   
   localparam int CLK_PERIOD = 10; // 100 MHz clock
-  localparam int MESH_WIDTH = 4;
-  localparam int MESH_HEIGHT = 4;
+  localparam int MESH_WIDTH = 8;
+  localparam int MESH_HEIGHT = 8;
   localparam int NUM_NODES = MESH_WIDTH * MESH_HEIGHT;
   
   logic clk = 0;

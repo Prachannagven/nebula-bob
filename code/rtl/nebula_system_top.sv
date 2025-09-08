@@ -22,8 +22,8 @@
 import nebula_pkg::*;
 
 module nebula_system_top #(
-  parameter int MESH_SIZE_X = 4,
-  parameter int MESH_SIZE_Y = 4,
+  parameter int MESH_SIZE_X = 8,
+  parameter int MESH_SIZE_Y = 8,
   parameter logic [AXI_ADDR_WIDTH-1:0] GLOBAL_BASE_ADDR = 64'h0000_0000_1000_0000,
   parameter logic [AXI_ADDR_WIDTH-1:0] NODE_ADDR_SIZE = 64'h0000_0000_0010_0000  // 1MB per node
 )(

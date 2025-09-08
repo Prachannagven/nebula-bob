@@ -20,8 +20,8 @@
 import nebula_pkg::*;
 
 module nebula_top #(
-  parameter int MESH_WIDTH = 4,                 // Mesh width (number of columns)
-  parameter int MESH_HEIGHT = 4,               // Mesh height (number of rows)
+  parameter int MESH_WIDTH = 8,                 // Mesh width (number of columns)
+  parameter int MESH_HEIGHT = 8,               // Mesh height (number of rows)
   parameter int NUM_NODES = MESH_WIDTH * MESH_HEIGHT,
   parameter int NODE_ID_WIDTH = $clog2(NUM_NODES),
   parameter int CONFIG_ADDR_WIDTH = 16,        // Configuration register address width

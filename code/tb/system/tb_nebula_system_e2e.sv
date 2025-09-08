@@ -8,8 +8,8 @@ module tb_nebula_system_e2e;
   // Constants
   // =============================================================================
   
-  localparam int MESH_SIZE_X = 4;
-  localparam int MESH_SIZE_Y = 4;
+  localparam int MESH_SIZE_X = 8;
+  localparam int MESH_SIZE_Y = 8;
   localparam int NUM_NODES = MESH_SIZE_X * MESH_SIZE_Y;
   localparam int PACKETS_PER_NODE = 20;
   

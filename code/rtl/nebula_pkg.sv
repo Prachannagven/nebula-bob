@@ -15,8 +15,8 @@ package nebula_pkg;
   // =============================================================================
   
   // Mesh dimensions (parameterizable for scaling)
-  parameter int MESH_SIZE_X_DEFAULT = 4;
-  parameter int MESH_SIZE_Y_DEFAULT = 4;
+  parameter int MESH_SIZE_X_DEFAULT = 8;
+  parameter int MESH_SIZE_Y_DEFAULT = 8;
   parameter int MAX_MESH_SIZE = 8;
   
   // Router port configuration
