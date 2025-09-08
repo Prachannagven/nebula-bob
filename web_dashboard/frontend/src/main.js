@@ -60,7 +60,7 @@ function initializeWebSocket() {
 
   state.socket.on("mesh_update", (data) => {
     state.meshData = data;
-    
+
     // Throttle mesh visualization updates for better performance
     const now = Date.now();
     if (now - state.lastMeshUpdate > state.meshUpdateThrottle) {
@@ -124,6 +124,15 @@ function setupEventListeners() {
     if (pref === "1") {
       document.documentElement.classList.add("dark");
     }
+  }
+
+  // VCD seek slider
+  const vcdSeekSlider = document.getElementById("vcdSeekSlider");
+  if (vcdSeekSlider) {
+    vcdSeekSlider.addEventListener("input", (e) => {
+      const percentage = parseFloat(e.target.value);
+      seekVcdReplay(percentage);
+    });
   }
 }
 
@@ -352,6 +361,7 @@ function showVcdReplayControls() {
 function updateVcdEventDisplay() {
   const eventCountDiv = document.getElementById("vcdEventCount");
   const replayIndexDiv = document.getElementById("vcdReplayIndex");
+  const seekSlider = document.getElementById("vcdSeekSlider");
 
   if (eventCountDiv) {
     eventCountDiv.textContent = `${state.vcdEvents?.length || 0} events loaded`;
@@ -361,6 +371,13 @@ function updateVcdEventDisplay() {
     replayIndexDiv.textContent = `Event ${state.vcdReplayIndex + 1} of ${
       state.vcdEvents?.length || 0
     }`;
+  }
+
+  // Update seek slider position
+  if (seekSlider && state.vcdEvents && state.vcdEvents.length > 0) {
+    const percentage =
+      (state.vcdReplayIndex / (state.vcdEvents.length - 1)) * 100;
+    seekSlider.value = percentage;
   }
 }
 
@@ -449,12 +466,59 @@ function updateReplaySpeed(speed) {
   document.getElementById("speedDisplay").textContent = `${speed}x`;
 }
 
+function changeVcdSpeed(speed) {
+  fetch("/api/simulation/vcd/speed", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ speed: speed }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      console.log("VCD speed changed:", data);
+      state.vcdReplaySpeed = data.replay_speed;
+      document.getElementById(
+        "vcdSpeedDisplay"
+      ).textContent = `${data.replay_speed}x`;
+      updateVcdReplayControls();
+    })
+    .catch((error) => {
+      console.error("Error changing VCD speed:", error);
+    });
+}
+
+function seekVcdReplay(percentage) {
+  const percentageFloat = parseFloat(percentage) / 100.0;
+
+  fetch("/api/simulation/vcd/seek", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ percentage: percentageFloat }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      console.log("VCD seek:", data);
+      state.vcdReplayIndex = data.current_index;
+      updateVcdEventDisplay();
+      updateMeshVisualization();
+      updateVcdReplayControls();
+    })
+    .catch((error) => {
+      console.error("Error seeking VCD replay:", error);
+    });
+}
+
 // Make functions globally available
 window.controlVcdReplay = controlVcdReplay;
 window.jumpToEventIndex = jumpToEventIndex;
 window.toggleVcdReplay = toggleVcdReplay;
 window.jumpToEnd = jumpToEnd;
 window.updateReplaySpeed = updateReplaySpeed;
+window.changeVcdSpeed = changeVcdSpeed;
+window.seekVcdReplay = seekVcdReplay;
 
 // Animation and VCD Replay System
 function startAnimationLoop() {
@@ -918,7 +982,7 @@ Avg Latency: ${avgLatency.toFixed(2)}ms`;
       if (packet.path && packet.hopIndex !== undefined && packet.hopIndex > 0) {
         const maxTrailLength = 3; // Reduce trail length for better performance
         const startIndex = Math.max(0, packet.hopIndex - maxTrailLength);
-        
+
         for (let i = startIndex; i < packet.hopIndex; i++) {
           const a = packet.path[i];
           const b = packet.path[i + 1] || a;
@@ -1414,46 +1478,61 @@ setInterval(() => {
 // New performance update functions for real-time updates
 function updatePerformanceHistory(historyData) {
   if (!historyData || !Array.isArray(historyData)) return;
-  
+
   // Store the history data for charting
   const newHistory = {
     utilization: [],
     congestion: [],
     temperature: [],
-    throughput: []
+    throughput: [],
   };
-  
-  historyData.forEach(point => {
+
+  historyData.forEach((point) => {
     newHistory.utilization.push(point.avg_utilization || 0);
     newHistory.congestion.push(point.max_congestion || 0);
     newHistory.throughput.push(point.total_packets || 0);
     newHistory.temperature.push(25.0); // Default temperature
   });
-  
+
   // Update state with new history
   Object.assign(state.performanceHistory, newHistory);
-  
+
   // Redraw performance charts
   if (state.performanceHistory.utilization.length > 0) {
-    drawChart("utilizationChart", state.performanceHistory.utilization, "#10b981", "Utilization");
-    drawChart("congestionChart", state.performanceHistory.congestion, "#ef4444", "Congestion");
-    drawChart("packetChart", state.performanceHistory.throughput, "#3b82f6", "Packets");
+    drawChart(
+      "utilizationChart",
+      state.performanceHistory.utilization,
+      "#10b981",
+      "Utilization"
+    );
+    drawChart(
+      "congestionChart",
+      state.performanceHistory.congestion,
+      "#ef4444",
+      "Congestion"
+    );
+    drawChart(
+      "packetChart",
+      state.performanceHistory.throughput,
+      "#3b82f6",
+      "Packets"
+    );
   }
 }
 
 function updateCurrentPerformanceMetrics(currentData) {
   if (!currentData) return;
-  
+
   // Update current performance display
   const elements = {
     totalPackets: document.getElementById("totalPackets"),
-    activePackets: document.getElementById("activePackets"), 
+    activePackets: document.getElementById("activePackets"),
     completedPackets: document.getElementById("completedPackets"),
     avgLatency: document.getElementById("avgLatency"),
     throughput: document.getElementById("throughput"),
-    meshUtilization: document.getElementById("meshUtilization")
+    meshUtilization: document.getElementById("meshUtilization"),
   };
-  
+
   if (elements.totalPackets) {
     elements.totalPackets.textContent = currentData.total_packets || 0;
   }
@@ -1464,33 +1543,41 @@ function updateCurrentPerformanceMetrics(currentData) {
     elements.completedPackets.textContent = currentData.completed_packets || 0;
   }
   if (elements.avgLatency) {
-    elements.avgLatency.textContent = `${(currentData.avg_latency || 0).toFixed(2)}ns`;
+    elements.avgLatency.textContent = `${(currentData.avg_latency || 0).toFixed(
+      2
+    )}ns`;
   }
   if (elements.throughput) {
-    elements.throughput.textContent = `${(currentData.throughput || 0).toFixed(2)} pkt/s`;
+    elements.throughput.textContent = `${(currentData.throughput || 0).toFixed(
+      2
+    )} pkt/s`;
   }
   if (elements.meshUtilization) {
-    elements.meshUtilization.textContent = `${((currentData.avg_utilization || 0) * 100).toFixed(1)}%`;
+    elements.meshUtilization.textContent = `${(
+      (currentData.avg_utilization || 0) * 100
+    ).toFixed(1)}%`;
   }
 }
 
 function updateVcdReplayProgress(progress) {
   const progressBar = document.getElementById("vcdReplayProgressBar");
   const progressText = document.getElementById("vcdReplayProgressText");
-  
+
   if (progressBar) {
     progressBar.style.width = `${(progress * 100).toFixed(1)}%`;
   }
   if (progressText) {
     progressText.textContent = `${(progress * 100).toFixed(1)}%`;
   }
-  
+
   // Update VCD replay index display
   if (state.vcdEvents && state.vcdEvents.length > 0) {
     const currentIndex = Math.floor(progress * state.vcdEvents.length);
     const replayIndexDiv = document.getElementById("vcdReplayIndex");
     if (replayIndexDiv) {
-      replayIndexDiv.textContent = `Event ${currentIndex + 1} of ${state.vcdEvents.length}`;
+      replayIndexDiv.textContent = `Event ${currentIndex + 1} of ${
+        state.vcdEvents.length
+      }`;
     }
   }
 }
@@ -1499,7 +1586,7 @@ function updateVcdReplayControls() {
   const playBtn = document.getElementById("vcdPlayBtn");
   const pauseBtn = document.getElementById("vcdPauseBtn");
   const statusSpan = document.getElementById("vcdReplayStatus");
-  
+
   if (playBtn && pauseBtn) {
     if (state.vcdReplayActive) {
       playBtn.style.display = "none";
@@ -1509,9 +1596,11 @@ function updateVcdReplayControls() {
       pauseBtn.style.display = "none";
     }
   }
-  
+
   if (statusSpan) {
     statusSpan.textContent = state.vcdReplayActive ? "Playing" : "Paused";
-    statusSpan.className = state.vcdReplayActive ? "text-green-600" : "text-yellow-600";
+    statusSpan.className = state.vcdReplayActive
+      ? "text-green-600"
+      : "text-yellow-600";
   }
 }

@@ -2,59 +2,132 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom styles */
+/* Root variables for smooth theme transitions */
+:root {
+  --transition-duration: 300ms;
+}
+
+/* Custom component styles */
+@layer components {
+  .card {
+    @apply bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 transition-all duration-300;
+  }
+  
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 shadow-sm;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 shadow-sm;
+  }
+  
+  .input-field {
+    @apply w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all duration-200;
+  }
+  
+  .slider {
+    @apply accent-blue-600 dark:accent-blue-500;
+  }
+}
+
+/* Router visualization styles */
 .router-node {
     transition: all 0.3s ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .router-node:hover {
-    transform: scale(1.1);
+    transform: scale(1.05);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
 }
 
 .packet-animation {
-    animation: packetMove 0.5s ease-in-out;
+    animation: packetMove 0.8s ease-in-out;
 }
 
 @keyframes packetMove {
-    0% { opacity: 0.5; }
-    50% { opacity: 1; }
-    100% { opacity: 0.5; }
+    0% { opacity: 0.6; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.1); }
+    100% { opacity: 0.7; transform: scale(1); }
 }
 
+/* Connection lines */
 .connection-line {
     stroke: #9ca3af;
     stroke-width: 2;
+    transition: stroke 0.3s ease;
 }
 
+.dark .connection-line { 
+    stroke: #6b7280; 
+}
+
+/* Mesh background grid */
 .mesh-grid {
     background-image: 
-        linear-gradient(to right, #f3f4f6 1px, transparent 1px),
-        linear-gradient(to bottom, #f3f4f6 1px, transparent 1px);
+        linear-gradient(to right, rgba(156, 163, 175, 0.2) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(156, 163, 175, 0.2) 1px, transparent 1px);
     background-size: 20px 20px;
 }
 
-/* Dark mode adjustments */
 .dark .mesh-grid {
     background-image: 
-        linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px);
+        linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
 }
 
-.dark .connection-line { stroke: #6b7280; }
-
-/* Packet trails */
+/* Packet trails with improved visibility */
 .packet-trail {
-    stroke: rgba(99, 102, 241, 0.35);
-    stroke-width: 4;
+    stroke: rgba(59, 130, 246, 0.6);
+    stroke-width: 3;
     stroke-linecap: round;
     fill: none;
-    transition: opacity 0.3s ease;
+    transition: stroke 0.3s ease;
 }
 
-.packet-trail.active {
-    stroke: rgba(34, 197, 94, 0.8);
-    stroke-width: 4;
-    animation: trailPulse 1s ease-in-out infinite;
+.dark .packet-trail {
+    stroke: rgba(96, 165, 250, 0.7);
+}
+
+/* Performance metric cards */
+.metric-card {
+    @apply bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900;
+    border: 1px solid rgba(156, 163, 175, 0.2);
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dark .metric-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Enhanced scrollbars */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800 rounded-lg;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 dark:bg-gray-600 rounded-lg;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500 dark:bg-gray-500;
+}
+
+/* Smooth theme transitions */
+* {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: var(--transition-duration);
+    transition-timing-function: ease-in-out;
 }
 
 @keyframes trailPulse {
