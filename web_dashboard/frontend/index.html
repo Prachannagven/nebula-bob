@@ -6,17 +6,27 @@
     <title>🚀 Nebula GPU Interconnect Dashboard</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
-  <body class="bg-gray-100 min-h-screen">
+  <body class="bg-gray-100 dark:bg-gray-900 min-h-screen transition-colors">
     <div id="app">
       <!-- Header -->
-      <header class="bg-blue-600 text-white shadow-lg">
+      <header
+        class="bg-blue-600 dark:bg-gray-800 text-white shadow-lg transition-colors"
+      >
         <div class="container mx-auto px-4 py-4">
           <h1 class="text-2xl font-bold">
             🚀 Nebula GPU Interconnect Dashboard
           </h1>
-          <p class="text-blue-100">
+          <p class="text-blue-100 dark:text-gray-300">
             Real-time NoC mesh visualization and simulation
           </p>
+          <div class="mt-2">
+            <button
+              id="toggleThemeBtn"
+              class="bg-white/20 hover:bg-white/30 dark:bg-black/20 dark:hover:bg-black/30 text-white text-sm px-3 py-1 rounded-md transition"
+            >
+              🌗 Toggle Dark Mode
+            </button>
+          </div>
         </div>
       </header>
 
@@ -26,7 +36,9 @@
           <!-- Control Panel -->
           <div class="lg:col-span-1 space-y-6">
             <!-- Simulation Controls -->
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div
+              class="bg-white dark:bg-gray-800 dark:text-gray-100 rounded-lg shadow-md p-6 transition-colors"
+            >
               <h2 class="text-lg font-semibold mb-4 text-gray-800">
                 🚀 Simulation Controls
               </h2>
@@ -106,7 +118,9 @@
             </div>
 
             <!-- VCD File Controls -->
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div
+              class="bg-white dark:bg-gray-800 dark:text-gray-100 rounded-lg shadow-md p-6 transition-colors"
+            >
               <h2 class="text-lg font-semibold mb-4 text-gray-800">
                 📁 VCD File Manager
               </h2>
@@ -146,7 +160,10 @@
             </div>
 
             <!-- VCD Replay Controls -->
-            <div id="vcdReplayControls" class="bg-white rounded-lg shadow-md p-6 hidden">
+            <div
+              id="vcdReplayControls"
+              class="bg-white dark:bg-gray-800 dark:text-gray-100 rounded-lg shadow-md p-6 hidden transition-colors"
+            >
               <h2 class="text-lg font-semibold mb-4 text-gray-800">
                 ⏯️ VCD Replay Controls
               </h2>
@@ -168,6 +185,22 @@
                     title="Reset to beginning"
                   >
                     ⏮️
+                  </button>
+                  <button
+                    id="vcdPlayBtn"
+                    onclick="controlVcdReplay('play')"
+                    class="bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition duration-200"
+                    title="Play VCD replay"
+                  >
+                    ▶️
+                  </button>
+                  <button
+                    id="vcdPauseBtn"
+                    onclick="controlVcdReplay('pause')"
+                    class="bg-yellow-600 text-white px-3 py-2 rounded-md hover:bg-yellow-700 transition duration-200 hidden"
+                    title="Pause VCD replay"
+                  >
+                    ⏸️
                   </button>
                   <button
                     id="playPauseBtn"
@@ -200,6 +233,21 @@
                   </button>
                 </div>
 
+                <!-- VCD Replay Status and Progress -->
+                <div class="bg-gray-50 p-3 rounded-lg">
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-medium">Status:</span>
+                    <span id="vcdReplayStatus" class="text-sm text-gray-600">Stopped</span>
+                  </div>
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-medium">Progress:</span>
+                    <span id="vcdReplayProgressText" class="text-sm text-gray-600">0%</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div id="vcdReplayProgressBar" class="bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
+                  </div>
+                </div>
+
                 <div class="flex items-center space-x-2">
                   <label class="text-sm font-medium text-gray-700">
                     Speed:
@@ -214,7 +262,9 @@
                     class="flex-1"
                     oninput="updateReplaySpeed(this.value)"
                   />
-                  <span id="speedDisplay" class="text-sm text-gray-600">1.0x</span>
+                  <span id="speedDisplay" class="text-sm text-gray-600"
+                    >1.0x</span
+                  >
                 </div>
 
                 <div>
@@ -241,7 +291,9 @@
             </div>
 
             <!-- Router Statistics -->
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div
+              class="bg-white dark:bg-gray-800 dark:text-gray-100 rounded-lg shadow-md p-6 transition-colors"
+            >
               <h2 class="text-lg font-semibold mb-4 text-gray-800">
                 📊 Router Statistics
               </h2>
@@ -251,7 +303,9 @@
             </div>
 
             <!-- Simulation Log -->
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div
+              class="bg-white dark:bg-gray-800 dark:text-gray-100 rounded-lg shadow-md p-6 transition-colors"
+            >
               <h2 class="text-lg font-semibold mb-4 text-gray-800">
                 📝 Simulation Log
               </h2>
@@ -267,7 +321,9 @@
           <!-- Visualization Panel -->
           <div class="lg:col-span-2 space-y-6">
             <!-- Mesh Visualization -->
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div
+              class="bg-white dark:bg-gray-800 dark:text-gray-100 rounded-lg shadow-md p-6 transition-colors"
+            >
               <h2 class="text-lg font-semibold mb-4 text-gray-800">
                 🕸️ NoC Mesh Topology
               </h2>
@@ -280,14 +336,82 @@
             </div>
 
             <!-- Performance Charts -->
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div
+              class="bg-white dark:bg-gray-800 dark:text-gray-100 rounded-lg shadow-md p-6 transition-colors"
+            >
               <h2 class="text-lg font-semibold mb-4 text-gray-800">
                 📈 Performance Metrics
               </h2>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-gray-50 p-4 rounded-lg">
                   <h3 class="text-sm font-medium text-gray-700 mb-2">
-                    Packet Count
+                    Total Packets
+                  </h3>
+                  <div
+                    id="totalPackets"
+                    class="text-2xl font-bold text-blue-600"
+                  >
+                    0
+                  </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    Active Packets
+                  </h3>
+                  <div
+                    id="activePackets"
+                    class="text-2xl font-bold text-green-600"
+                  >
+                    0
+                  </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    Completed Packets
+                  </h3>
+                  <div
+                    id="completedPackets"
+                    class="text-2xl font-bold text-purple-600"
+                  >
+                    0
+                  </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    Avg Latency
+                  </h3>
+                  <div
+                    id="avgLatency"
+                    class="text-2xl font-bold text-orange-600"
+                  >
+                    0ns
+                  </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    Throughput
+                  </h3>
+                  <div
+                    id="throughput"
+                    class="text-2xl font-bold text-cyan-600"
+                  >
+                    0 pkt/s
+                  </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    Mesh Utilization
+                  </h3>
+                  <div
+                    id="meshUtilization"
+                    class="text-2xl font-bold text-red-600"
+                  >
+                    0%
+                  </div>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg">
+                  <h3 class="text-sm font-medium text-gray-700 mb-2">
+                    Packet Count (Legacy)
                   </h3>
                   <div
                     id="packetCount"
@@ -298,7 +422,7 @@
                 </div>
                 <div class="bg-gray-50 p-4 rounded-lg">
                   <h3 class="text-sm font-medium text-gray-700 mb-2">
-                    Avg Utilization
+                    Avg Utilization (Legacy)
                   </h3>
                   <div
                     id="avgUtilization"
@@ -364,13 +488,21 @@
                   <h3 class="text-sm font-medium text-gray-700 mb-2">
                     Network Utilization Over Time
                   </h3>
-                  <canvas id="utilizationChart" width="300" height="100"></canvas>
+                  <canvas
+                    id="utilizationChart"
+                    width="300"
+                    height="100"
+                  ></canvas>
                 </div>
                 <div class="bg-gray-50 p-4 rounded-lg">
                   <h3 class="text-sm font-medium text-gray-700 mb-2">
                     Congestion Level
                   </h3>
-                  <canvas id="congestionChart" width="300" height="100"></canvas>
+                  <canvas
+                    id="congestionChart"
+                    width="300"
+                    height="100"
+                  ></canvas>
                 </div>
                 <div class="bg-gray-50 p-4 rounded-lg">
                   <h3 class="text-sm font-medium text-gray-700 mb-2">
