@@ -7,8 +7,8 @@
 import nebula_pkg::*;
 
 module nebula_top #(
-  parameter int MESH_WIDTH = 4,
-  parameter int MESH_HEIGHT = 4,
+  parameter int MESH_WIDTH = 8,
+  parameter int MESH_HEIGHT = 8,
   parameter int NUM_NODES = MESH_WIDTH * MESH_HEIGHT
 )(
   input  logic        clk,

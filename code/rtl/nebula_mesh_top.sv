@@ -19,8 +19,8 @@
 import nebula_pkg::*;
 
 module nebula_mesh_top #(
-  parameter int MESH_SIZE_X = 4,
-  parameter int MESH_SIZE_Y = 4
+  parameter int MESH_SIZE_X = 8,
+  parameter int MESH_SIZE_Y = 8
 )(
   input  logic clk,
   input  logic rst_n,

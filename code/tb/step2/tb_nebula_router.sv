@@ -17,8 +17,8 @@ import nebula_pkg::*;
 module tb_nebula_router;
 
   // Test parameters
-  parameter int MESH_SIZE_X = 4;
-  parameter int MESH_SIZE_Y = 4;
+  parameter int MESH_SIZE_X = 8;
+  parameter int MESH_SIZE_Y = 8;
   parameter int ROUTER_X = 2;  // Middle of 4x4 mesh
   parameter int ROUTER_Y = 2;
   parameter int TEST_TIMEOUT = 1000;

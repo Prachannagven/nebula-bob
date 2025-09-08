@@ -424,7 +424,7 @@
           <!-- Visualization Panel -->
           <div class="xl:col-span-3 space-y-6">
             <!-- Main visualization row -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 gap-6">
               <!-- Mesh Visualization -->
               <div
                 class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 transition-all duration-300"
@@ -439,64 +439,6 @@
                   class="relative bg-gray-50 dark:bg-gray-800 rounded-lg p-6 min-h-96 border border-gray-200 dark:border-gray-700"
                 >
                   <!-- SVG mesh will be rendered here -->
-                </div>
-              </div>
-
-              <!-- Performance Graphs -->
-              <div
-                class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 transition-all duration-300"
-              >
-                <h2
-                  class="text-lg font-semibold mb-6 text-gray-900 dark:text-gray-100"
-                >
-                  Performance Graphs
-                </h2>
-                <div class="space-y-4">
-                  <div
-                    class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
-                  >
-                    <h3
-                      class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
-                    >
-                      Network Utilization Over Time
-                    </h3>
-                    <canvas
-                      id="utilizationChart"
-                      width="300"
-                      height="80"
-                      class="w-full"
-                    ></canvas>
-                  </div>
-                  <div
-                    class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
-                  >
-                    <h3
-                      class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
-                    >
-                      Congestion Level
-                    </h3>
-                    <canvas
-                      id="congestionChart"
-                      width="300"
-                      height="80"
-                      class="w-full"
-                    ></canvas>
-                  </div>
-                  <div
-                    class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
-                  >
-                    <h3
-                      class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
-                    >
-                      Active Packets
-                    </h3>
-                    <canvas
-                      id="packetChart"
-                      width="300"
-                      height="80"
-                      class="w-full"
-                    ></canvas>
-                  </div>
                 </div>
               </div>
             </div>
@@ -607,10 +549,10 @@
                   <h3
                     class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                   >
-                    Packet Count (Legacy)
+                    Active Packets
                   </h3>
                   <div
-                    id="packetCount"
+                    id="activePackets"
                     class="text-2xl font-bold text-blue-600 dark:text-blue-400"
                   >
                     0
@@ -622,56 +564,11 @@
                   <h3
                     class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                   >
-                    Avg Utilization (Legacy)
+                    Completed Packets
                   </h3>
                   <div
-                    id="avgUtilization"
+                    id="completedPackets"
                     class="text-2xl font-bold text-green-600 dark:text-green-400"
-                  >
-                    0%
-                  </div>
-                </div>
-                <div
-                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
-                >
-                  <h3
-                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                  >
-                    Max Congestion
-                  </h3>
-                  <div
-                    id="maxCongestion"
-                    class="text-2xl font-bold text-red-600 dark:text-red-400"
-                  >
-                    0%
-                  </div>
-                </div>
-                <div
-                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
-                >
-                  <h3
-                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                  >
-                    Temperature
-                  </h3>
-                  <div
-                    id="avgTemperature"
-                    class="text-2xl font-bold text-orange-600 dark:text-orange-400"
-                  >
-                    25°C
-                  </div>
-                </div>
-                <div
-                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
-                >
-                  <h3
-                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                  >
-                    VCD Events
-                  </h3>
-                  <div
-                    id="vcdEventsTotal"
-                    class="text-2xl font-bold text-purple-600 dark:text-purple-400"
                   >
                     0
                   </div>
@@ -682,13 +579,13 @@
                   <h3
                     class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                   >
-                    VCD Progress
+                    Total Packets
                   </h3>
                   <div
-                    id="vcdProgress"
-                    class="text-2xl font-bold text-indigo-600 dark:text-indigo-400"
+                    id="totalPackets"
+                    class="text-2xl font-bold text-purple-600 dark:text-purple-400"
                   >
-                    0%
+                    0
                   </div>
                 </div>
               </div>
@@ -714,8 +611,8 @@
                   </h3>
                   <canvas
                     id="utilizationChart"
-                    width="300"
-                    height="100"
+                    width="800"
+                    height="300"
                     class="w-full"
                   ></canvas>
                 </div>
@@ -729,8 +626,8 @@
                   </h3>
                   <canvas
                     id="congestionChart"
-                    width="300"
-                    height="100"
+                    width="800"
+                    height="300"
                     class="w-full"
                   ></canvas>
                 </div>
@@ -744,8 +641,8 @@
                   </h3>
                   <canvas
                     id="packetChart"
-                    width="300"
-                    height="100"
+                    width="800"
+                    height="300"
                     class="w-full"
                   ></canvas>
                 </div>

@@ -765,6 +765,18 @@ function updateSimulationUI(running) {
 function updateDashboardStatus(data) {
   state.simulationRunning = data.simulation_running;
   updateSimulationUI(data.simulation_running);
+
+  // Update packet statistics from backend data
+  if (data.total_packets !== undefined) {
+    document.getElementById("totalPackets").textContent = data.total_packets;
+  }
+  if (data.active_packets !== undefined) {
+    document.getElementById("activePackets").textContent = data.active_packets;
+  }
+  if (data.completed_packets !== undefined) {
+    document.getElementById("completedPackets").textContent =
+      data.completed_packets;
+  }
 }
 
 function showStatus(message, type) {
@@ -1151,41 +1163,14 @@ function updatePerformanceMetrics() {
   const activePackets = getActivePackets();
   const routers = state.meshData.routers || [];
 
-  // Update packet count (use VCD if available, otherwise simulation packets)
-  document.getElementById("packetCount").textContent = activePackets.length;
+  // Remove legacy packet count update - now handled by status updates
 
   // Calculate metrics only if routers exist
   if (routers.length > 0) {
-    // Calculate average utilization
-    const avgUtil =
-      routers.reduce((sum, r) => sum + (r.utilization || 0), 0) /
-      routers.length;
-    document.getElementById("avgUtilization").textContent = isNaN(avgUtil)
-      ? "0%"
-      : `${(avgUtil * 100).toFixed(1)}%`;
-
-    // Calculate max congestion
-    const congestionLevels = routers.map((r) => r.congestion_level || 0);
-    const maxCongestion =
-      congestionLevels.length > 0 ? Math.max(...congestionLevels) : 0;
-    document.getElementById("maxCongestion").textContent = isFinite(
-      maxCongestion
-    )
-      ? `${(maxCongestion * 100).toFixed(1)}%`
-      : "0%";
-
-    // Calculate average temperature
-    const avgTemp =
-      routers.reduce((sum, r) => sum + (r.temperature || 25), 0) /
-      routers.length;
-    document.getElementById("avgTemperature").textContent = isNaN(avgTemp)
-      ? "25°C"
-      : `${avgTemp.toFixed(1)}°C`;
+    // Remove legacy utilization, congestion, and temperature calculations
+    // These stats were removed from the UI
   } else {
-    // Default values when no routers
-    document.getElementById("avgUtilization").textContent = "0%";
-    document.getElementById("maxCongestion").textContent = "0%";
-    document.getElementById("avgTemperature").textContent = "25°C";
+    // Remove legacy default values
   }
 
   // Update VCD metrics if VCD data is loaded
@@ -1229,23 +1214,28 @@ function updateVcdMetrics() {
 
 function updatePerformanceCharts() {
   const routers = state.meshData.routers || [];
-  const activePackets = getActivePackets();
 
   if (routers.length === 0) return;
 
-  // Calculate current metrics
+  // Calculate current metrics from router data
   const avgUtilization =
     routers.reduce((sum, r) => sum + (r.utilization || 0), 0) / routers.length;
   const maxCongestion = Math.max(
     ...routers.map((r) => r.congestion_level || 0)
   );
-  const packetCount = activePackets.length;
 
-  // Add to history (keep last 50 points)
-  const maxHistory = 50;
+  // Use actual active packet count from backend status instead of calculating locally
+  // This is set via updateDashboardStatus when status_update events arrive
+  const activePacketsEl = document.getElementById("activePackets");
+  const activePacketCount = activePacketsEl
+    ? parseInt(activePacketsEl.textContent)
+    : 0;
+
+  // Add to history (keep last 200 points for better time span)
+  const maxHistory = 200;
   state.performanceHistory.utilization.push(avgUtilization);
   state.performanceHistory.congestion.push(maxCongestion);
-  state.performanceHistory.throughput.push(packetCount);
+  state.performanceHistory.throughput.push(activePacketCount);
 
   if (state.performanceHistory.utilization.length > maxHistory) {
     state.performanceHistory.utilization.shift();

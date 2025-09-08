@@ -29,8 +29,8 @@ module tb_nebula_niu_axi;
   parameter int CLK_PERIOD = 10;
   parameter int NODE_X = 1;
   parameter int NODE_Y = 1;
-  parameter int MESH_SIZE_X = 4;
-  parameter int MESH_SIZE_Y = 4;
+  parameter int MESH_SIZE_X = 8;
+  parameter int MESH_SIZE_Y = 8;
   parameter logic [AXI_ADDR_WIDTH-1:0] NODE_BASE_ADDR = 64'h0000_0000_1100_0000; // Node (1,1)
   parameter logic [AXI_ADDR_WIDTH-1:0] NODE_ADDR_MASK = 64'hFFFF_FFFF_FFF0_0000;
   parameter int TEST_TIMEOUT = 5000;

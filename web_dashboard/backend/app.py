@@ -40,11 +40,11 @@ except ImportError as e:
     print(f"Traffic modules not available: {e}")
     TRAFFIC_AVAILABLE = False
 
-# Set up logging with minimal terminal output
+# region: logging
+
 log_dir = os.path.join(os.path.dirname(__file__), "logs")
 os.makedirs(log_dir, exist_ok=True)
 
-# Configure main logger - file only for detailed logs
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -52,11 +52,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configure Flask's werkzeug logger to be quiet
 werkzeug_logger = logging.getLogger("werkzeug")
 werkzeug_logger.setLevel(logging.ERROR)
 
-# Create a separate logger for API calls
 api_logger = logging.getLogger("api_calls")
 api_logger.setLevel(logging.INFO)
 api_handler = logging.FileHandler(os.path.join(log_dir, "api_calls.log"))
@@ -64,13 +62,13 @@ api_handler.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
 api_logger.addHandler(api_handler)
 api_logger.propagate = False
 
-# Create a separate logger for Verilog compilation
 verilog_logger = logging.getLogger("verilog_compilation")
 verilog_logger.setLevel(logging.INFO)
 verilog_handler = logging.FileHandler(os.path.join(log_dir, "verilog_compilation.log"))
 verilog_handler.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
 verilog_logger.addHandler(verilog_handler)
 verilog_logger.propagate = False
+# endregion
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "nebula-dashboard-secret"
@@ -81,8 +79,8 @@ socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger
 # Dashboard state
 class DashboardState:
     def __init__(self):
-        self.mesh_width = 4
-        self.mesh_height = 4
+        self.mesh_width = 8
+        self.mesh_height = 8
         self.simulation_running = False
         self.simulation_status = "idle"
         self.simulation_progress = 0
@@ -157,7 +155,7 @@ class DashboardState:
         # Process a consistent number of events per logical simulation step
         # This ensures packet counts are accurate regardless of playback speed
         events_processed = 0
-        max_events_per_update = 3  # Fixed number for consistent simulation state
+        max_events_per_update = 6  # Increased for 8x8 mesh - more nodes = more activity
 
         while (
             self.vcd_replay_index < len(self.vcd_events)
@@ -259,8 +257,8 @@ class DashboardState:
             self.packets.pop(i)
 
         # Limit number of packets for performance
-        if len(self.packets) > 50:  # MAX_PACKETS
-            self.packets = self.packets[-50:]
+        if len(self.packets) > 100:  # MAX_PACKETS - increased for 8x8 mesh
+            self.packets = self.packets[-100:]
 
         # Update router statistics
         self._update_router_statistics()
@@ -561,7 +559,9 @@ def get_performance_data():
         "average_latency": avg_latency,  # Average latency in ms
         "throughput": throughput,  # Packets per second
         "mesh_utilization": mesh_utilization,
-        "history": state.performance_history[-20:],  # Last 20 data points
+        "history": state.performance_history[
+            -100:
+        ],  # Last 100 data points for better time span
         "simulation_time": state.simulation_time,
         "vcd_replay_progress": vcd_progress,
         "vcd_replay_active": state.vcd_replay_active,
@@ -871,7 +871,7 @@ def run_verilog_simulation(mesh_width, mesh_height, pattern, injection_rate):
             mesh_height=mesh_height,
             pattern=TrafficPattern(pattern),
             injection_rate=injection_rate,
-            duration_cycles=50,  # Reduced from default 1000 to limit VCD file size
+            duration_cycles=20,  # Increased for 8x8 mesh to show more complex patterns
         )
 
         generator = NebulaTrafficGenerator(config)
@@ -1050,8 +1050,8 @@ def start_simulation():
         return jsonify({"error": "Simulation already running"}), 400
 
     data = request.get_json()
-    mesh_width = data.get("mesh_width", 4)
-    mesh_height = data.get("mesh_height", 4)
+    mesh_width = data.get("mesh_width", 8)
+    mesh_height = data.get("mesh_height", 8)
     pattern = data.get("pattern", "uniform_random")
     injection_rate = data.get("injection_rate", 0.1)
 
