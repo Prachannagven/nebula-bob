@@ -96,6 +96,269 @@ class DashboardState:
         self.performance_history = []
         self.verilog_process = None
         self.last_simulation_error = None
+        # Initialize additional state variables
+        self.simulation_time = 0
+        self.workload_data = []
+        self.vcd_replay_active = False
+        self.vcd_replay_speed = 1.0  # Events per update
+        self.next_packet_id = 0  # Ensure unique packet IDs
+        # Initialize router statistics
+        self._initialize_router_stats()
+
+    def _initialize_router_stats(self):
+        """Initialize router statistics for the mesh"""
+        for i in range(self.mesh_width * self.mesh_height):
+            self.router_stats[i] = {
+                "id": i,
+                "x": i % self.mesh_width,
+                "y": i // self.mesh_width,
+                "status": "idle",
+                "packets_sent": 0,
+                "packets_received": 0,
+                "utilization": 0.0,
+                "buffer_occupancy": 0.0,
+                "congestion_level": 0.0,
+                "temperature": 25.0,
+                "bytes_processed": 0
+            }
+
+    def convert_vcd_to_workload(self):
+        """Convert VCD events to workload data format for visualization"""
+        if not self.vcd_events:
+            return
+
+        self.workload_data = []
+        for event in self.vcd_events:
+            # Convert VCD event to workload event format
+            workload_event = {
+                "timestamp": int(event.timestamp // 10),  # Scale down time
+                "src_x": event.src_x,
+                "src_y": event.src_y,
+                "dst_x": event.dst_x,
+                "dst_y": event.dst_y,
+                "packet_type": getattr(event, "packet_type", "DATA"),
+                "size_bytes": getattr(event, "size_bytes", 64),
+                "priority": getattr(event, "priority", 0),
+            }
+            self.workload_data.append(workload_event)
+
+        logger.info(f"Converted {len(self.workload_data)} VCD events to workload data")
+
+    def update_simulation_from_vcd(self):
+        """Update simulation state from VCD data"""
+        if not self.vcd_events or self.vcd_replay_index >= len(self.vcd_events):
+            return
+
+        # Process VCD events for current time step
+        events_processed = 0
+        max_events_per_update = max(1, int(self.vcd_replay_speed * 3))  # Process more events for smoother flow
+
+        while (self.vcd_replay_index < len(self.vcd_events) and 
+               events_processed < max_events_per_update):
+            
+            event = self.vcd_events[self.vcd_replay_index]
+            
+            # Extract source and destination coordinates
+            # Check if we have router_id to convert to x,y coordinates
+            if hasattr(event, 'router_id') and (event.src_x == 0 and event.src_y == 0 and event.dst_x == 0 and event.dst_y == 0):
+                # Convert router_id to x,y coordinates
+                src_x = getattr(event, 'router_id', 0) % self.mesh_width
+                src_y = getattr(event, 'router_id', 0) // self.mesh_width
+                # For now, generate random destination within mesh bounds
+                import random
+                dst_x = random.randint(0, self.mesh_width - 1)
+                dst_y = random.randint(0, self.mesh_height - 1)
+            else:
+                src_x = event.src_x
+                src_y = event.src_y
+                dst_x = event.dst_x
+                dst_y = event.dst_y
+            
+            # Ensure coordinates are within mesh bounds
+            src_x = max(0, min(src_x, self.mesh_width - 1))
+            src_y = max(0, min(src_y, self.mesh_height - 1))
+            dst_x = max(0, min(dst_x, self.mesh_width - 1))
+            dst_y = max(0, min(dst_y, self.mesh_height - 1))
+            
+            # Debug: Log event details for first few events
+            if self.vcd_replay_index < 5:
+                logger.info(f"Processing VCD event {self.vcd_replay_index}: src=({src_x},{src_y}) dst=({dst_x},{dst_y}) router_id={getattr(event, 'router_id', 'N/A')}")
+            
+            # Skip if source and destination are the same (no movement needed)
+            if src_x == dst_x and src_y == dst_y:
+                self.vcd_replay_index += 1
+                events_processed += 1
+                continue
+            
+            # Convert VCD event to packet
+            path = self._calculate_xy_route(src_x, src_y, dst_x, dst_y)
+            # Convert path from list of tuples to list of dicts for frontend compatibility
+            path_objects = [{"x": x, "y": y} for x, y in path]
+            
+            packet = {
+                "id": self.next_packet_id,
+                "src_x": src_x,
+                "src_y": src_y,
+                "dst_x": dst_x,
+                "dst_y": dst_y,
+                "current_x": float(src_x),
+                "current_y": float(src_y),
+                "path": path_objects,
+                "hop_index": 0,
+                "packet_type": getattr(event, "packet_type", "DATA"),
+                "size_bytes": getattr(event, "size_bytes", 64),
+                "timestamp": float(event.timestamp),
+                "priority": getattr(event, 'priority', 0),
+                "status": "routing"
+            }
+            
+            self.packets.append(packet)
+            self.next_packet_id += 1
+            self.vcd_replay_index += 1
+            events_processed += 1
+
+        # Update existing packets
+        self._update_packet_positions()
+
+        # Remove completed packets after a delay for visualization
+        current_time = time.time()
+        packets_to_remove = []
+        for i, packet in enumerate(self.packets):
+            if packet["status"] == "delivered":
+                # Add delivery timestamp if not present
+                if "delivered_time" not in packet:
+                    packet["delivered_time"] = current_time
+                # Remove after 2 seconds for user to see delivery
+                elif current_time - packet["delivered_time"] > 2.0:
+                    packets_to_remove.append(i)
+            elif packet["hop_index"] >= len(packet["path"]):
+                # Fallback: remove packets that completed their path
+                packets_to_remove.append(i)
+        
+        # Remove packets in reverse order to maintain indices
+        for i in reversed(packets_to_remove):
+            self.packets.pop(i)
+
+        # Limit number of packets for performance
+        if len(self.packets) > 50:  # MAX_PACKETS
+            self.packets = self.packets[-50:]
+
+        # Update router statistics
+        self._update_router_statistics()
+
+        # Record performance metrics
+        self._record_performance_metrics()
+
+        self.simulation_time += 1
+
+    def _calculate_xy_route(self, src_x: int, src_y: int, dst_x: int, dst_y: int) -> List[Tuple[int, int]]:
+        """Calculate XY routing path"""
+        path = [(src_x, src_y)]
+
+        # Move in X direction first
+        current_x, current_y = src_x, src_y
+        while current_x != dst_x:
+            if current_x < dst_x:
+                current_x += 1
+            else:
+                current_x -= 1
+            path.append((current_x, current_y))
+
+        # Then move in Y direction
+        while current_y != dst_y:
+            if current_y < dst_y:
+                current_y += 1
+            else:
+                current_y -= 1
+            path.append((current_x, current_y))
+
+        return path
+
+    def _update_packet_positions(self):
+        """Update positions of all packets"""
+        for packet in self.packets:
+            if packet["hop_index"] < len(packet["path"]) - 1:
+                # Move towards next hop
+                next_hop = packet["path"][packet["hop_index"] + 1]
+                target_x, target_y = next_hop["x"], next_hop["y"]
+
+                # Smooth movement
+                speed = 0.3  # Increased speed for better animation
+                dx = target_x - packet["current_x"]
+                dy = target_y - packet["current_y"]
+
+                if abs(dx) < speed and abs(dy) < speed:
+                    # Reached next hop
+                    packet["current_x"] = float(target_x)
+                    packet["current_y"] = float(target_y)
+                    packet["hop_index"] += 1
+                    
+                    # Check if packet reached destination
+                    if packet["hop_index"] >= len(packet["path"]) - 1:
+                        packet["status"] = "delivered"
+                        # Update destination router stats
+                        router_id = packet["dst_y"] * self.mesh_width + packet["dst_x"]
+                        if router_id in self.router_stats:
+                            self.router_stats[router_id]["packets_received"] += 1
+                else:
+                    # Move towards target
+                    packet["current_x"] += dx * speed
+                    packet["current_y"] += dy * speed
+
+    def _update_router_statistics(self):
+        """Update router statistics based on current packets"""
+        # Reset utilization
+        for stats in self.router_stats.values():
+            stats["utilization"] = 0.0
+            stats["congestion_level"] = 0.0
+
+        # Count packets at each router
+        router_packet_count = {}
+        for packet in self.packets:
+            router_x = int(round(packet["current_x"]))
+            router_y = int(round(packet["current_y"]))
+            router_id = router_y * self.mesh_width + router_x
+
+            if 0 <= router_id < len(self.router_stats):
+                router_packet_count[router_id] = (
+                    router_packet_count.get(router_id, 0) + 1
+                )
+
+        # Update statistics
+        for router_id, count in router_packet_count.items():
+            if router_id in self.router_stats:
+                stats = self.router_stats[router_id]
+                stats["utilization"] = min(1.0, count / 5.0)  # Normalize to 0-1
+                stats["congestion_level"] = min(1.0, count / 3.0)
+                stats["temperature"] = 25.0 + stats["utilization"] * 15.0  # 25-40°C
+                stats["buffer_occupancy"] = stats["utilization"] * 0.8
+
+    def _record_performance_metrics(self):
+        """Record performance metrics for history"""
+        total_packets = len(self.packets)
+        active_packets = len([p for p in self.packets if p["status"] == "routing"])
+        completed_packets = len([p for p in self.packets if p["status"] == "delivered"])
+        
+        if self.router_stats:
+            avg_utilization = sum([stats["utilization"] for stats in self.router_stats.values()]) / len(self.router_stats)
+            max_congestion = max([stats["congestion_level"] for stats in self.router_stats.values()])
+        else:
+            avg_utilization = 0.0
+            max_congestion = 0.0
+
+        self.performance_history.append({
+            "time": self.simulation_time,
+            "total_packets": total_packets,
+            "active_packets": active_packets,
+            "completed_packets": completed_packets,
+            "avg_utilization": avg_utilization,
+            "max_congestion": max_congestion,
+            "timestamp": time.time()
+        })
+
+        # Keep only last 100 points for performance
+        if len(self.performance_history) > 100:
+            self.performance_history = self.performance_history[-100:]
 
 
 state = DashboardState()
@@ -141,11 +404,15 @@ def get_status_data():
         "mesh_width": state.mesh_width,
         "mesh_height": state.mesh_height,
         "total_packets": len(state.packets),
-        "active_packets": len([p for p in state.packets if p.status == "routing"]),
-        "completed_packets": len([p for p in state.packets if p.status == "delivered"]),
+        "active_packets": len([p for p in state.packets if p.get("status", "routing") == "routing"]),
+        "completed_packets": len([p for p in state.packets if p.get("status") == "delivered"]),
         "vcd_events_count": len(state.vcd_events),
         "vcd_replay_index": state.vcd_replay_index,
+        "vcd_replay_active": state.vcd_replay_active,
+        "vcd_replay_speed": state.vcd_replay_speed,
+        "simulation_time": state.simulation_time,
         "last_vcd_file": state.last_vcd_file,
+        "performance_history_length": len(state.performance_history),
     }
 
 
@@ -177,12 +444,11 @@ def get_mesh_data():
     return jsonify(
         {
             "routers": list(state.router_stats.values()),
-            "packets": [
-                asdict(packet) if hasattr(packet, "__dict__") else packet
-                for packet in state.packets
-            ],
+            "packets": state.packets,  # Already in dict format now
             "mesh_width": state.mesh_width,
             "mesh_height": state.mesh_height,
+            "simulation_time": state.simulation_time,
+            "vcd_replay_active": state.vcd_replay_active,
         }
     )
 
@@ -193,14 +459,12 @@ def get_performance_data():
     api_logger.info(f"Performance data request from {request.remote_addr}")
 
     total_packets = len(state.packets)
-    active_packets = len([p for p in state.packets if p.status == "routing"])
-    completed_packets = len([p for p in state.packets if p.status == "delivered"])
+    active_packets = len([p for p in state.packets if p.get("status", "routing") == "routing"])
+    completed_packets = len([p for p in state.packets if p.get("status") == "delivered"])
 
     avg_latency = 0.0
     if completed_packets > 0:
-        total_latency = sum(
-            [p.timestamp for p in state.packets if p.status == "delivered"]
-        )
+        total_latency = sum([p["timestamp"] for p in state.packets if p.get("status") == "delivered"])
         avg_latency = total_latency / completed_packets
 
     throughput = 0.0
@@ -209,21 +473,24 @@ def get_performance_data():
         if elapsed > 0:
             throughput = completed_packets / elapsed
 
-    return jsonify(
-        {
-            "total_packets": total_packets,
-            "active_packets": active_packets,
-            "completed_packets": completed_packets,
-            "average_latency": avg_latency,
-            "throughput": throughput,
-            "mesh_utilization": (
-                sum([r.utilization for r in state.router_stats.values()])
-                / len(state.router_stats)
-                if state.router_stats
-                else 0.0
-            ),
-        }
-    )
+    mesh_utilization = 0.0
+    if state.router_stats:
+        mesh_utilization = sum([r["utilization"] for r in state.router_stats.values()]) / len(state.router_stats)
+
+    # Add performance history for trending
+    performance_data = {
+        "total_packets": total_packets,
+        "active_packets": active_packets,
+        "completed_packets": completed_packets,
+        "average_latency": avg_latency,
+        "throughput": throughput,
+        "mesh_utilization": mesh_utilization,
+        "history": state.performance_history[-20:],  # Last 20 data points
+        "simulation_time": state.simulation_time,
+        "vcd_replay_progress": (state.vcd_replay_index / len(state.vcd_events)) if state.vcd_events else 0.0
+    }
+
+    return jsonify(performance_data)
 
 
 @app.route("/api/simulation/log")
@@ -235,11 +502,13 @@ def get_simulation_log():
 @app.route("/api/simulation/vcd")
 def get_vcd_events():
     """Get VCD packet events for visualization"""
-    return jsonify({
-        "events": [asdict(event) for event in state.vcd_events],
-        "event_count": len(state.vcd_events),
-        "replay_index": state.vcd_replay_index
-    })
+    return jsonify(
+        {
+            "events": [asdict(event) for event in state.vcd_events],
+            "event_count": len(state.vcd_events),
+            "replay_index": state.vcd_replay_index,
+        }
+    )
 
 
 @app.route("/api/simulation/vcd/replay", methods=["POST"])
@@ -247,20 +516,54 @@ def control_vcd_replay():
     """Control VCD event replay"""
     data = request.get_json()
     action = data.get("action", "play")
-    
+
     if action == "reset":
         state.vcd_replay_index = 0
+        state.packets = []
+        state.simulation_time = 0
+        state.performance_history = []
+        state._initialize_router_stats()
+        state.vcd_replay_active = True
     elif action == "step":
         if state.vcd_replay_index < len(state.vcd_events) - 1:
-            state.vcd_replay_index += 1
+            state.update_simulation_from_vcd()
+    elif action == "play":
+        state.vcd_replay_active = True
+    elif action == "pause":
+        state.vcd_replay_active = False
     elif action == "jump":
         index = data.get("index", 0)
         if 0 <= index < len(state.vcd_events):
             state.vcd_replay_index = index
-    
+            # Reset simulation state to this point
+            state.packets = []
+            state.simulation_time = index
+            state.performance_history = []
+            state._initialize_router_stats()
+    elif action == "speed":
+        speed = data.get("speed", 1.0)
+        state.vcd_replay_speed = max(0.1, min(10.0, speed))  # Clamp between 0.1x and 10x
+
     return jsonify({
         "replay_index": state.vcd_replay_index,
-        "total_events": len(state.vcd_events)
+        "total_events": len(state.vcd_events),
+        "replay_active": state.vcd_replay_active,
+        "replay_speed": state.vcd_replay_speed,
+        "simulation_time": state.simulation_time
+    })
+
+
+@app.route("/api/simulation/vcd/status")
+def get_vcd_replay_status():
+    """Get current VCD replay status"""
+    return jsonify({
+        "replay_index": state.vcd_replay_index,
+        "total_events": len(state.vcd_events),
+        "replay_active": state.vcd_replay_active,
+        "replay_speed": state.vcd_replay_speed,
+        "simulation_time": state.simulation_time,
+        "packets_count": len(state.packets),
+        "progress": (state.vcd_replay_index / len(state.vcd_events)) if state.vcd_events else 0.0
     })
 
 
@@ -270,29 +573,30 @@ def list_vcd_files():
     try:
         vcd_files = []
         build_dir = os.path.join(project_root, "code", "build")
-        
+
         if os.path.exists(build_dir):
             for file in os.listdir(build_dir):
-                if file.endswith('.vcd'):
+                if file.endswith(".vcd"):
                     file_path = os.path.join(build_dir, file)
                     stat = os.stat(file_path)
-                    vcd_files.append({
-                        "name": file,
-                        "path": file_path,
-                        "size": stat.st_size,
-                        "modified": stat.st_mtime,
-                        "readable_size": format_file_size(stat.st_size),
-                        "readable_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(stat.st_mtime))
-                    })
-        
+                    vcd_files.append(
+                        {
+                            "name": file,
+                            "path": file_path,
+                            "size": stat.st_size,
+                            "modified": stat.st_mtime,
+                            "readable_size": format_file_size(stat.st_size),
+                            "readable_time": time.strftime(
+                                "%Y-%m-%d %H:%M:%S", time.localtime(stat.st_mtime)
+                            ),
+                        }
+                    )
+
         # Sort by modification time (newest first)
         vcd_files.sort(key=lambda x: x["modified"], reverse=True)
-        
-        return jsonify({
-            "vcd_files": vcd_files,
-            "count": len(vcd_files)
-        })
-        
+
+        return jsonify({"vcd_files": vcd_files, "count": len(vcd_files)})
+
     except Exception as e:
         logger.error(f"Error listing VCD files: {e}")
         return jsonify({"error": str(e)}), 500
@@ -304,43 +608,58 @@ def load_vcd_file():
     try:
         data = request.get_json()
         vcd_file = data.get("file")
-        
+
         if not vcd_file:
             return jsonify({"error": "No VCD file specified"}), 400
-            
+
         # Validate the file path (security check)
         build_dir = os.path.join(project_root, "code", "build")
         vcd_path = os.path.join(build_dir, vcd_file)
-        
+
         if not os.path.exists(vcd_path) or not vcd_path.startswith(build_dir):
             return jsonify({"error": "VCD file not found or invalid path"}), 404
-            
+
         if not TRAFFIC_AVAILABLE:
             return jsonify({"error": "VCD parser not available"}), 500
-            
+
         # Parse the VCD file
         logger.info(f"Loading VCD file: {vcd_file}")
         parser = SimpleVCDParser(vcd_path)
         success = parser.parse()
-        
+
         if not success:
             return jsonify({"error": "Failed to parse VCD file"}), 500
-            
+
         events = parser.packet_events
-        
+
         # Update state with loaded events
         state.vcd_events = events
         state.vcd_replay_index = 0
         state.last_vcd_file = vcd_file
         
+        # Convert VCD to workload data for simulation
+        state.convert_vcd_to_workload()
+        
+        # Reset simulation state for new VCD data
+        state.packets = []
+        state.simulation_time = 0
+        state.performance_history = []
+        state.vcd_replay_active = True
+        
+        # Initialize router stats
+        state._initialize_router_stats()
+
         logger.info(f"Loaded {len(events)} events from {vcd_file}")
-        
-        return jsonify({
-            "message": f"Loaded {len(events)} events from {vcd_file}",
-            "event_count": len(events),
-            "file": vcd_file
-        })
-        
+
+        return jsonify(
+            {
+                "message": f"Loaded {len(events)} events from {vcd_file}",
+                "event_count": len(events),
+                "file": vcd_file,
+                "replay_active": state.vcd_replay_active,
+            }
+        )
+
     except Exception as e:
         logger.error(f"Error loading VCD file: {e}")
         return jsonify({"error": str(e)}), 500
@@ -350,9 +669,10 @@ def format_file_size(size_bytes):
     """Format file size in human readable format"""
     if size_bytes == 0:
         return "0 B"
-    
+
     size_names = ["B", "KB", "MB", "GB"]
     import math
+
     i = int(math.floor(math.log(size_bytes, 1024)))
     p = math.pow(1024, i)
     s = round(size_bytes / p, 2)
@@ -480,28 +800,43 @@ def run_verilog_simulation(mesh_width, mesh_height, pattern, injection_rate):
                 state.simulation_status = "completed"
                 logger.info("Verilog simulation completed successfully")
                 print("✅ Verilog simulation completed")
-                
+
                 # Process VCD file if it exists
                 vcd_path = os.path.join(code_dir, "build", "tb_nebula_traffic.vcd")
                 if os.path.exists(vcd_path):
                     print("📊 Processing VCD file...")
                     state.simulation_status = "processing_vcd"
-                    socketio.emit("simulation_status_update", {"status": state.simulation_status})
-                    
+                    socketio.emit(
+                        "simulation_status_update", {"status": state.simulation_status}
+                    )
+
                     try:
                         if TRAFFIC_AVAILABLE:
                             parser = SimpleVCDParser(vcd_path)
                             parser.parse()
                             state.vcd_events = parser.packet_events
+                            
+                            # Process VCD data for simulation
+                            state.convert_vcd_to_workload()
+                            
+                            # Reset and initialize simulation state
+                            state.packets = []
+                            state.simulation_time = 0
+                            state.performance_history = []
+                            state.vcd_replay_index = 0
+                            state.vcd_replay_active = True
+                            state._initialize_router_stats()
+                            
                             logger.info(f"Loaded {len(state.vcd_events)} packet events from VCD")
                             print(f"📈 Loaded {len(state.vcd_events)} packet events")
+                            print("🔄 VCD replay started automatically")
                         else:
                             logger.warning("VCD parser not available")
                             print("⚠️ VCD parser not available")
                     except Exception as vcd_error:
                         logger.error(f"VCD processing error: {vcd_error}")
                         print(f"❌ VCD processing error: {vcd_error}")
-                    
+
                     state.simulation_status = "completed"
                 else:
                     logger.warning("VCD file not found")
@@ -589,11 +924,41 @@ def handle_disconnect():
 
 
 def background_thread():
-    """Background thread for periodic updates"""
+    """Background thread for periodic updates and VCD replay"""
     while True:
-        time.sleep(5)  # Update every 5 seconds
-        if socketio:
-            socketio.emit("status_update", get_status_data())
+        try:
+            # Update VCD replay if active
+            if state.vcd_replay_active and state.vcd_events and state.vcd_replay_index < len(state.vcd_events):
+                state.update_simulation_from_vcd()
+                
+                # Emit real-time updates via WebSocket
+                if socketio:
+                    socketio.emit("mesh_update", {
+                        "routers": list(state.router_stats.values()),
+                        "packets": state.packets,
+                        "mesh_width": state.mesh_width,
+                        "mesh_height": state.mesh_height,
+                    })
+                    
+                    socketio.emit("performance_update", {
+                        "history": state.performance_history[-10:],  # Last 10 points
+                        "current": state.performance_history[-1] if state.performance_history else None,
+                        "simulation_time": state.simulation_time,
+                        "vcd_progress": (state.vcd_replay_index / len(state.vcd_events)) if state.vcd_events else 0.0
+                    })
+            
+            # Always emit status updates
+            if socketio:
+                socketio.emit("status_update", get_status_data())
+                
+        except Exception as e:
+            logger.error(f"Background thread error: {e}")
+        
+        # Update frequency: faster when replaying VCD, slower when idle
+        if state.vcd_replay_active and state.vcd_events:
+            time.sleep(0.1)  # 10 Hz for smooth animation
+        else:
+            time.sleep(1.0)  # 1 Hz for status updates only
 
 
 # Start background thread

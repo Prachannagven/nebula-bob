@@ -32,3 +32,82 @@
         linear-gradient(to bottom, #f3f4f6 1px, transparent 1px);
     background-size: 20px 20px;
 }
+
+/* Dark mode adjustments */
+.dark .mesh-grid {
+    background-image: 
+        linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px);
+}
+
+.dark .connection-line { stroke: #6b7280; }
+
+/* Packet trails */
+.packet-trail {
+    stroke: rgba(99, 102, 241, 0.35);
+    stroke-width: 4;
+    stroke-linecap: round;
+    fill: none;
+    transition: opacity 0.3s ease;
+}
+
+.packet-trail.active {
+    stroke: rgba(34, 197, 94, 0.8);
+    stroke-width: 4;
+    animation: trailPulse 1s ease-in-out infinite;
+}
+
+@keyframes trailPulse {
+    0%, 100% { stroke-width: 3; opacity: 0.6; }
+    50% { stroke-width: 5; opacity: 0.9; }
+}
+
+.packet-trail.fast { stroke: rgba(16, 185, 129, 0.35); }
+.packet-trail.slow { stroke: rgba(239, 68, 68, 0.35); }
+
+/* Enhanced packet animation */
+.packet-animation {
+    animation: packetPulse 1s ease-in-out infinite;
+}
+
+@keyframes packetPulse {
+    0%, 100% { 
+        opacity: 0.95; 
+        filter: drop-shadow(0 0 3px rgba(255,255,255,0.5));
+    }
+    50% { 
+        opacity: 1; 
+        filter: drop-shadow(0 0 6px rgba(255,255,255,0.8));
+    }
+}
+
+/* Router styles */
+.router-node {
+    transition: all 0.3s ease;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.router-circle {
+    filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.4));
+    stroke-opacity: 1;
+    fill-opacity: 1;
+}
+
+.router-shadow { 
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15)); 
+    transition: all 0.3s ease;
+}
+
+.router-node:hover {
+    transform: scale(1.15);
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.25));
+}
+
+.router-node:hover .router-circle {
+    stroke-width: 4;
+    filter: drop-shadow(3px 3px 6px rgba(0, 0, 0, 0.6));
+}
+
+.dark .router-shadow { filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5)); }
+.dark .router-node:hover { filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7)); }

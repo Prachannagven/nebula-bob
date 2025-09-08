@@ -172,7 +172,7 @@ class SimpleVCDParser:
             router_match = re.search(r"router_flit_(?:in|out)\[(\d+)\]", full_name)
             if router_match:
                 router_id = int(router_match.group(1))
-                
+
                 if router_id not in router_signals:
                     router_signals[router_id] = {}
 
@@ -189,7 +189,9 @@ class SimpleVCDParser:
 
             # Also look for the old pattern in case it exists
             # Look for patterns like: tb_nebula_top.dut.gen_nodes[0].router_inst.flit_out_valid
-            router_match = re.search(r"gen_(?:mesh_)?nodes?\[(\d+)\].*router", full_name)
+            router_match = re.search(
+                r"gen_(?:mesh_)?nodes?\[(\d+)\].*router", full_name
+            )
             if not router_match:
                 continue
 
