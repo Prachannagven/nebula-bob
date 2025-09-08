@@ -43,7 +43,13 @@ module nebula_router #(
   // Debug and status
   output logic [NUM_PORTS-1:0][NUM_VCS-1:0]      vc_status,
   output logic [PERF_COUNTER_WIDTH-1:0]          packets_routed,
-  output error_code_e                            error_status
+  output error_code_e                            error_status,
+  
+  // Adaptive routing debug outputs
+  output logic [NUM_PORTS-1:0][7:0]              port_congestion_debug,
+  output logic [NUM_PORTS-1:0]                   port_congested_debug,
+  output logic [15:0]                            adaptive_routes_count,
+  output logic [15:0]                            total_routes_count
 );
 
   // ============================================================================
@@ -193,7 +199,62 @@ module nebula_router #(
   endgenerate
 
   // ============================================================================
-  // ROUTE COMPUTATION STAGE (RC) - XY ROUTING
+  // ADAPTIVE ROUTING - CONGESTION AWARE COMPUTATION
+  // ============================================================================
+  
+  // Congestion monitoring signals
+  logic [NUM_PORTS-1:0][7:0] port_congestion_level;  // 0-255 congestion metric
+  logic [NUM_PORTS-1:0]      port_heavily_congested; // Threshold-based indicator
+  
+  // Calculate congestion levels for each output port
+  generate
+    for (g_out_port = 0; g_out_port < NUM_PORTS; g_out_port++) begin : gen_congestion_monitor
+      always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+          port_congestion_level[g_out_port] <= 8'h00;
+          port_heavily_congested[g_out_port] <= 1'b0;
+        end else begin
+          logic [7:0] total_buffer_usage;
+          logic [7:0] credit_shortage;
+          logic [7:0] active_vc_count;
+          
+          // Calculate buffer usage across all VCs for this output port
+          total_buffer_usage = 8'h00;
+          credit_shortage = 8'h00;
+          active_vc_count = 8'h00;
+          
+          for (int vc = 0; vc < NUM_VCS; vc++) begin
+            // Buffer usage contribution (scale VC_DEPTH to 8-bit range)
+            total_buffer_usage = total_buffer_usage + 
+                               ((VC_DEPTH - credit_count[g_out_port][vc]) << 6) / VC_DEPTH;
+            
+            // Credit shortage contribution
+            if (credit_count[g_out_port][vc] < (VC_DEPTH / 4)) begin
+              credit_shortage = credit_shortage + 8'h40; // High penalty for low credits
+            end else if (credit_count[g_out_port][vc] < (VC_DEPTH / 2)) begin
+              credit_shortage = credit_shortage + 8'h20; // Medium penalty
+            end
+            
+            // Active VC count (VCs that are allocated/busy)
+            if (credit_count[g_out_port][vc] < VC_DEPTH) begin
+              active_vc_count = active_vc_count + 8'h10;
+            end
+          end
+          
+          // Combined congestion metric with weighted factors
+          port_congestion_level[g_out_port] <= (total_buffer_usage >> 2) +  // 25% buffer usage
+                                              (credit_shortage >> 1) +      // 50% credit shortage  
+                                              (active_vc_count >> 2);       // 25% active VCs
+          
+          // Heavy congestion threshold (>75% of max)
+          port_heavily_congested[g_out_port] <= (port_congestion_level[g_out_port] > 8'hC0);
+        end
+      end
+    end
+  endgenerate
+
+  // ============================================================================
+  // ROUTE COMPUTATION STAGE (RC) - ADAPTIVE ROUTING WITH CONGESTION AWARENESS
   // ============================================================================
   
   generate
@@ -207,12 +268,14 @@ module nebula_router #(
             rc_flit[g_port][g_vc] <= '0;
           end else begin
             noc_flit_t current_flit;
+            logic [2:0] primary_route, alternate_route, selected_route;
+            logic use_adaptive_routing;
             
             rc_valid[g_port][g_vc] <= 1'b0;
             
             // Route computation for head flits or when VC needs routing
             if (!vc_empty[g_port][g_vc] && vc_state[g_port][g_vc] == VC_ROUTING) begin
-              current_flit = vc_read_data[g_port][g_vc];  // Now uses show-ahead FIFO
+              current_flit = vc_read_data[g_port][g_vc];  // Show-ahead FIFO
               
               if (current_flit.flit_type == FLIT_TYPE_HEAD || 
                   current_flit.flit_type == FLIT_TYPE_SINGLE) begin
@@ -222,35 +285,110 @@ module nebula_router #(
                 $display("[DEBUG] @%0t: RC[%0d][%0d] Processing flit, dest=(%0d,%0d), router=(%0d,%0d)", 
                          $time, g_port, g_vc, current_flit.dest_x, current_flit.dest_y, ROUTER_X, ROUTER_Y);
                 
-                // XY routing algorithm (dimension-ordered)
-                if (current_flit.dest_x != ROUTER_X) begin
-                  // Route in X dimension first
-                  if (current_flit.dest_x > ROUTER_X) begin
-                    rc_out_port[g_port][g_vc] <= PORT_EAST;
-                    $display("[DEBUG] @%0t: RC[%0d][%0d] Routing EAST (dest_x=%0d > router_x=%0d)", 
-                             $time, g_port, g_vc, current_flit.dest_x, ROUTER_X);
-                  end else begin
-                    rc_out_port[g_port][g_vc] <= PORT_WEST;
-                    $display("[DEBUG] @%0t: RC[%0d][%0d] Routing WEST (dest_x=%0d < router_x=%0d)", 
-                             $time, g_port, g_vc, current_flit.dest_x, ROUTER_X);
-                  end
-                end else if (current_flit.dest_y != ROUTER_Y) begin
-                  // Route in Y dimension if X matches
-                  if (current_flit.dest_y > ROUTER_Y) begin
-                    rc_out_port[g_port][g_vc] <= PORT_NORTH;
-                    $display("[DEBUG] @%0t: RC[%0d][%0d] Routing NORTH (dest_y=%0d > router_y=%0d)", 
-                             $time, g_port, g_vc, current_flit.dest_y, ROUTER_Y);
-                  end else begin
-                    rc_out_port[g_port][g_vc] <= PORT_SOUTH;
-                    $display("[DEBUG] @%0t: RC[%0d][%0d] Routing SOUTH (dest_y=%0d < router_y=%0d)", 
-                             $time, g_port, g_vc, current_flit.dest_y, ROUTER_Y);
-                  end
-                end else begin
+                // Check if destination is reached
+                if (current_flit.dest_x == ROUTER_X && current_flit.dest_y == ROUTER_Y) begin
                   // Destination reached - route to local port
-                  rc_out_port[g_port][g_vc] <= PORT_LOCAL;
-                  $display("[DEBUG] @%0t: RC[%0d][%0d] Routing LOCAL (dest matches router pos)", 
+                  selected_route = PORT_LOCAL;
+                  use_adaptive_routing = 1'b0;
+                  $display("[DEBUG] @%0t: RC[%0d][%0d] Routing LOCAL (destination reached)", 
                            $time, g_port, g_vc);
+                           
+                end else begin
+                  // Determine primary route using XY routing
+                  if (current_flit.dest_x != ROUTER_X) begin
+                    // Route in X dimension first (XY routing)
+                    primary_route = (current_flit.dest_x > ROUTER_X) ? PORT_EAST : PORT_WEST;
+                  end else begin
+                    // Route in Y dimension if X matches
+                    primary_route = (current_flit.dest_y > ROUTER_Y) ? PORT_NORTH : PORT_SOUTH;
+                  end
+                  
+                  // Determine alternate route for adaptive routing (if available)
+                  alternate_route = primary_route; // Default to primary
+                  use_adaptive_routing = 1'b0;
+                  
+                  // Only use adaptive routing if not at destination boundary
+                  if (current_flit.dest_x != ROUTER_X && current_flit.dest_y != ROUTER_Y) begin
+                    // Both dimensions need routing - can potentially route in Y first
+                    alternate_route = (current_flit.dest_y > ROUTER_Y) ? PORT_NORTH : PORT_SOUTH;
+                    use_adaptive_routing = 1'b1;
+                  end else if (current_flit.dest_x == ROUTER_X && current_flit.dest_y != ROUTER_Y) begin
+                    // Only Y routing needed - check if we can use diagonal routing
+                    if (ROUTER_X < MESH_SIZE_X - 1 && current_flit.dest_x < MESH_SIZE_X - 1) begin
+                      alternate_route = PORT_EAST;  // Try going east first then north/south
+                      use_adaptive_routing = 1'b1;
+                    end else if (ROUTER_X > 0 && current_flit.dest_x > 0) begin
+                      alternate_route = PORT_WEST;  // Try going west first then north/south
+                      use_adaptive_routing = 1'b1;
+                    end
+                  end else if (current_flit.dest_y == ROUTER_Y && current_flit.dest_x != ROUTER_X) begin
+                    // Only X routing needed - check if we can use diagonal routing
+                    if (ROUTER_Y < MESH_SIZE_Y - 1 && current_flit.dest_y < MESH_SIZE_Y - 1) begin
+                      alternate_route = PORT_NORTH; // Try going north first then east/west
+                      use_adaptive_routing = 1'b1;
+                    end else if (ROUTER_Y > 0 && current_flit.dest_y > 0) begin
+                      alternate_route = PORT_SOUTH; // Try going south first then east/west
+                      use_adaptive_routing = 1'b1;
+                    end
+                  end
+                  
+                  // Adaptive routing decision based on congestion
+                  if (use_adaptive_routing) begin
+                    logic primary_congested, alternate_available;
+                    logic [7:0] primary_congestion, alternate_congestion;
+                    
+                    primary_congested = port_heavily_congested[primary_route];
+                    primary_congestion = port_congestion_level[primary_route];
+                    alternate_congestion = port_congestion_level[alternate_route];
+                    
+                    // Check if alternate route has sufficient credits
+                    alternate_available = 1'b0;
+                    for (int alt_vc = 0; alt_vc < NUM_VCS; alt_vc++) begin
+                      if (credit_count[alternate_route][alt_vc] > (VC_DEPTH / 4)) begin
+                        alternate_available = 1'b1;
+                        break;
+                      end
+                    end
+                    
+                    // Adaptive routing logic with hysteresis
+                    if (primary_congested && alternate_available && 
+                        (alternate_congestion < (primary_congestion - 8'h20))) begin
+                      // Use alternate route if primary is heavily congested 
+                      // and alternate is significantly less congested
+                      selected_route = alternate_route;
+                      $display("[DEBUG] @%0t: RC[%0d][%0d] ADAPTIVE: Using alternate route %0s (primary %0s congested: %02x vs %02x)", 
+                               $time, g_port, g_vc, 
+                               alternate_route == PORT_NORTH ? "NORTH" :
+                               alternate_route == PORT_SOUTH ? "SOUTH" :
+                               alternate_route == PORT_EAST ? "EAST" : "WEST",
+                               primary_route == PORT_NORTH ? "NORTH" :
+                               primary_route == PORT_SOUTH ? "SOUTH" :
+                               primary_route == PORT_EAST ? "EAST" : "WEST",
+                               primary_congestion, alternate_congestion);
+                    end else begin
+                      // Use primary route (XY routing)
+                      selected_route = primary_route;
+                      if (primary_congested) begin
+                        $display("[DEBUG] @%0t: RC[%0d][%0d] ADAPTIVE: Staying with primary route %0s despite congestion (alternate not better: %02x vs %02x)", 
+                                 $time, g_port, g_vc,
+                                 primary_route == PORT_NORTH ? "NORTH" :
+                                 primary_route == PORT_SOUTH ? "SOUTH" :
+                                 primary_route == PORT_EAST ? "EAST" : "WEST",
+                                 primary_congestion, alternate_congestion);
+                      end
+                    end
+                  end else begin
+                    // No adaptive routing possible, use primary (XY) route
+                    selected_route = primary_route;
+                    $display("[DEBUG] @%0t: RC[%0d][%0d] XY ROUTING: %0s (no adaptive options)", 
+                             $time, g_port, g_vc,
+                             selected_route == PORT_NORTH ? "NORTH" :
+                             selected_route == PORT_SOUTH ? "SOUTH" :
+                             selected_route == PORT_EAST ? "EAST" : "WEST");
+                  end
                 end
+                
+                rc_out_port[g_port][g_vc] <= selected_route;
               end
             end
           end
@@ -605,7 +743,7 @@ module nebula_router #(
   endgenerate
 
   // ============================================================================
-  // STATUS AND DEBUG OUTPUTS
+  // STATUS AND DEBUG OUTPUTS  
   // ============================================================================
   
   always_comb begin
@@ -616,10 +754,14 @@ module nebula_router #(
     end
   end
   
-  // Performance counter
+  // Performance counter with adaptive routing statistics
   logic packet_sent;
+  logic adaptive_route_taken;
+  
   always_comb begin
     packet_sent = 1'b0;
+    adaptive_route_taken = 1'b0;
+    
     for (int p = 0; p < NUM_PORTS; p++) begin
       if (flit_out_valid[p] && flit_out_ready[p] &&
           (flit_out[p].flit_type == FLIT_TYPE_TAIL || 
@@ -629,16 +771,50 @@ module nebula_router #(
     end
   end
   
+  // Additional debug signals for adaptive routing visibility  
+  logic [NUM_PORTS-1:0][7:0] debug_congestion_levels;
+  logic [NUM_PORTS-1:0]      debug_heavy_congestion;
+  logic [15:0]               adaptive_routes_taken;  // Counter for adaptive routing usage
+  logic [15:0]               total_routes_computed;   // Counter for total routes
+  
+  always_comb begin
+    debug_congestion_levels = port_congestion_level;
+    debug_heavy_congestion = port_heavily_congested;
+    port_congestion_debug = debug_congestion_levels;
+    port_congested_debug = debug_heavy_congestion;
+    adaptive_routes_count = adaptive_routes_taken;
+    total_routes_count = total_routes_computed;
+  end
+  
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       packets_routed <= '0;
       error_status <= ERR_NONE;
+      adaptive_routes_taken <= 16'h0000;
+      total_routes_computed <= 16'h0000;
     end else begin
       if (packet_sent) begin
         packets_routed <= packets_routed + 1;
       end
-      // Basic error detection (can be expanded)
-      error_status <= ERR_NONE;
+      
+      // Count adaptive routing usage for analysis
+      for (int p = 0; p < NUM_PORTS; p++) begin
+        for (int v = 0; v < NUM_VCS; v++) begin
+          if (rc_valid[p][v]) begin
+            total_routes_computed <= total_routes_computed + 1;
+            // Detection logic would need additional signals to track
+            // if alternate route was actually chosen - simplified here
+          end
+        end
+      end
+      
+      // Enhanced error detection with congestion monitoring
+      if (|port_heavily_congested) begin
+        // Could add congestion-related error codes here
+        error_status <= ERR_NONE; // For now, congestion is not an error
+      end else begin
+        error_status <= ERR_NONE;
+      end
     end
   end
 

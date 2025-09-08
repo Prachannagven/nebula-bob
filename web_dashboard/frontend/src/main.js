@@ -799,8 +799,8 @@ function initializeMeshVisualization() {
   const container = document.getElementById("meshVisualization");
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("width", "100%");
-  svg.setAttribute("height", "400");
-  svg.setAttribute("viewBox", "0 0 400 400");
+  svg.setAttribute("height", "600");
+  svg.setAttribute("viewBox", "0 0 800 600");
   svg.classList.add("mesh-grid");
 
   container.appendChild(svg);
@@ -840,10 +840,10 @@ function updateMeshVisualization() {
     }
   }
 
-  const cellWidth = 380 / mesh_width;
-  const cellHeight = 380 / mesh_height;
-  const offsetX = 10;
-  const offsetY = 10;
+  const cellWidth = 760 / mesh_width;
+  const cellHeight = 560 / mesh_height;
+  const offsetX = 20;
+  const offsetY = 20;
 
   // Get active packets first for congestion calculation
   const packetsToShow = getActivePackets();
@@ -866,7 +866,7 @@ function updateMeshVisualization() {
         line.setAttribute("y2", centerY);
         line.setAttribute("class", "connection-line");
         line.setAttribute("stroke", "#9ca3af");
-        line.setAttribute("stroke-width", "2");
+        line.setAttribute("stroke-width", "3");
         line.setAttribute("opacity", "0.6");
         state.meshSvg.appendChild(line);
       }
@@ -883,7 +883,7 @@ function updateMeshVisualization() {
         line.setAttribute("y2", centerY + cellHeight);
         line.setAttribute("class", "connection-line");
         line.setAttribute("stroke", "#9ca3af");
-        line.setAttribute("stroke-width", "2");
+        line.setAttribute("stroke-width", "3");
         line.setAttribute("opacity", "0.6");
         state.meshSvg.appendChild(line);
       }
@@ -914,7 +914,7 @@ function updateMeshVisualization() {
     );
     circle.setAttribute("cx", centerX);
     circle.setAttribute("cy", centerY);
-    circle.setAttribute("r", "18");
+    circle.setAttribute("r", "28");
 
     // Color based on congestion level (blue -> yellow -> red)
     let fillColor;
@@ -943,7 +943,7 @@ function updateMeshVisualization() {
 
     circle.setAttribute("fill", fillColor);
     circle.setAttribute("stroke", "#ffffff");
-    circle.setAttribute("stroke-width", "3");
+    circle.setAttribute("stroke-width", "4");
     circle.setAttribute("class", "router-node router-circle");
     circle.setAttribute("opacity", "1.0");
 
@@ -1016,7 +1016,7 @@ Avg Latency: ${avgLatency.toFixed(2)}ms`;
           trail.setAttribute("x2", x2);
           trail.setAttribute("y2", y2);
           trail.setAttribute("stroke", `rgba(99, 102, 241, ${opacity * 0.6})`);
-          trail.setAttribute("stroke-width", "2");
+          trail.setAttribute("stroke-width", "3");
           trail.setAttribute("stroke-linecap", "round");
           trail.setAttribute("class", "packet-trail");
           state.meshSvg.appendChild(trail);
@@ -1040,7 +1040,7 @@ Avg Latency: ${avgLatency.toFixed(2)}ms`;
           currentTrail.setAttribute("x2", x2);
           currentTrail.setAttribute("y2", y2);
           currentTrail.setAttribute("stroke", "rgba(34, 197, 94, 0.8)");
-          currentTrail.setAttribute("stroke-width", "3");
+          currentTrail.setAttribute("stroke-width", "4");
           currentTrail.setAttribute("stroke-linecap", "round");
           currentTrail.setAttribute("stroke-dasharray", "4,2");
           currentTrail.setAttribute("class", "packet-trail active");
@@ -1057,7 +1057,7 @@ Avg Latency: ${avgLatency.toFixed(2)}ms`;
       packetEl.setAttribute("cy", packetY);
       packetEl.setAttribute(
         "r",
-        packet.size_flits ? Math.min(6, 2 + packet.size_flits * 0.5) : 3
+        packet.size_flits ? Math.min(10, 4 + packet.size_flits * 0.8) : 5
       );
 
       // Color based on packet type or event type

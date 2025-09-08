@@ -1,1 +1,1 @@
-tb_nebula_cnn_training.sv
+tb_nebula_uniform_random.sv
