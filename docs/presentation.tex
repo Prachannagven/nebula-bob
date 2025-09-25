@@ -6,6 +6,7 @@
 \usepackage{tikz}
 \usepackage{listings}
 \usepackage{xcolor}
+\lstset{breaklines=true, basicstyle=\ttfamily\scriptsize}
 \definecolor{nebulablue}{RGB}{25,118,210}
 \definecolor{nebulagray}{RGB}{97,97,97}
 
@@ -18,6 +19,9 @@
 %-------------------------------------------------
 \begin{frame}
   \titlepage
+  \note{
+    This presentation introduces the \textbf{Nebula GPU Interconnect System}, a scalable, cache-coherent NoC for multi-GPU communication. The work covers \textbf{mesh topology}, \textbf{protocol support}, \textbf{router microarchitecture}, and \textbf{verification}. Emphasize the \textbf{technical depth} and \textbf{design decisions} throughout.
+  }
 \end{frame}
 
 %-------------------------------------------------
@@ -35,6 +39,9 @@
         \item Performance monitoring and visualization
       \end{itemize}
   \end{itemize}
+  \note{
+    	extbf{Goal:} Emphasize the need for \textbf{scalability} and \textbf{coherency} in modern GPU interconnects, especially for \textbf{AI/ML workloads}. The \textbf{2D mesh topology} allows flexible scaling. \textbf{AXI4} and \textbf{CHI} protocols enable both non-coherent and coherent communication. Implementation spans \textbf{SystemVerilog RTL}, \textbf{Python} for traffic/test, and a \textbf{web dashboard} for visualization. Key features include a \textbf{five-stage router pipeline}, \textbf{virtual channels}, and \textbf{performance monitoring}.
+  }
 \end{frame}
 
 %-------------------------------------------------
@@ -49,6 +56,9 @@
     \item Routers interconnected, edge nodes terminated
     \item Each node: router + protocol bridge + GPU/memory interface
   \end{itemize}
+  \note{
+    	extbf{Mesh topology} is generated automatically by the \texttt{nebula\_mesh\_top.sv} module. Each node in the mesh contains a \textbf{router}, a \textbf{protocol bridge} (AXI/CHI), and a \textbf{GPU/memory interface}. \textbf{Edge nodes} are terminated with tie-off logic. The design supports \textbf{parameterizable mesh sizes} (2x2 to 8x8). Emphasize \textbf{modularity} and \textbf{scalability}.
+  }
 \end{frame}
 
 %-------------------------------------------------
@@ -69,6 +79,9 @@
     \item Round-robin arbitration
     \item Congestion-aware adaptive routing
   \end{itemize}
+  \note{
+    The \textbf{router} is implemented as a \textbf{five-stage pipeline}: \textbf{Buffer Write}, \textbf{Route Computation}, \textbf{Virtual Channel Allocation}, \textbf{Switch Allocation}, and \textbf{Switch Traversal}. Each stage is responsible for a specific part of the packet/flit journey. \textbf{Virtual channels} (VCs) and \textbf{credit-based flow control} prevent deadlock and buffer overflow. \textbf{Round-robin arbitration} ensures fairness. \textbf{Adaptive routing} uses congestion metrics to select optimal paths.
+  }
 \end{frame}
 
 %-------------------------------------------------
@@ -90,6 +103,9 @@
       \item Switch Allocation: lines 460-570 in \texttt{nebula\_router.sv}
     \end{itemize}
   \end{block}
+  \note{
+    	extbf{XY Routing} is a \textbf{dimension-ordered} algorithm that guarantees \textbf{deadlock freedom}. \textbf{Adaptive routing} uses \textbf{congestion metrics} (buffer utilization, credit counts) to select less congested paths. \textbf{Programmable thresholds} allow tuning of adaptive behavior. \textbf{Technical details} reference specific code lines for \textbf{route computation}, \textbf{VC allocation}, and \textbf{switch allocation}.
+  }
 \end{frame}
 
 %-------------------------------------------------
@@ -314,6 +330,437 @@
 \begin{frame}{Q\&A}
   \centering
   \Huge Questions?
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{Nebula RTL Modules: Overview}
+  \begin{itemize}
+    \item The Nebula NoC is composed of modular, parameterized SystemVerilog RTL blocks.
+    \item Each module is designed for scalability, protocol flexibility, and high throughput.
+    \item This section details the design decisions, code structure, and unique features of each RTL module.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_top.sv: System Integration (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item Parameterized mesh size, protocol enable/disable, and config bus widths.
+    \item Unified configuration and status interface for software control.
+    \item Modular instantiation of routers, bridges, and monitoring logic.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Parameter and function definitions for mesh configuration.
+    \item Synchronous logic for system control and status.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_top.sv: System Integration (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item System-wide error aggregation and debug trace export.
+    \item Performance counters and status registers for real-time monitoring.
+    \item Generate blocks for scalable instantiation.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Generate loops for node instantiation.
+    \item Status aggregation logic.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_system\_top.sv: System-Level Integration (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item Centralizes mesh, memory, and protocol bridge instantiation.
+    \item Implements global address decoding and mapping.
+    \item Coordinates system resets and status propagation.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Mesh instantiation with parameterized width and height.
+    \item Address mapping logic from global to local address space.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_system\_top.sv: System-Level Integration (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item Flexible address mapping for heterogeneous memory systems.
+    \item System-level reset and error handling.
+    \item Integration hooks for simulation and testbench control.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Synchronous reset and control logic.
+    \item Error status propagation and handling.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_mesh\_top.sv: Mesh Topology (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item 2D grid instantiation using nested generate loops.
+    \item Edge node handling (tie-off or wrap-around).
+    \item Parameterized for mesh width/height.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Generate loops for X and Y dimensions of the mesh.
+    \item Conditional logic for edge node connections.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_mesh\_top.sv: Mesh Topology (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item Automated port wiring for all mesh neighbors.
+    \item Edge detection logic for boundary nodes.
+    \item Supports mesh reconfiguration for fault tolerance.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Port connection logic using generate and if-else constructs.
+    \item Tie-off or wrap-around logic for edge cases.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_router.sv: Router Pipeline (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item Five-stage pipeline for high throughput.
+    \item Virtual channel allocation and credit-based flow control.
+    \item Adaptive and deterministic routing support.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Synchronous logic for each stage of the router pipeline.
+    \item Combinational logic for route computation and switch allocation.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_router.sv: Router Pipeline (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item Per-port and per-VC performance counters.
+    \item Error detection for buffer overflow and protocol violations.
+    \item Round-robin arbitration for switch allocation.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Performance counter increment and error flag logic.
+    \item Arbitration logic for switch allocation.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_axi\_if.sv: AXI4 Interface (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item Parameterized AXI widths for flexible integration.
+    \item FIFO-based buffering for all AXI channels.
+    \item Clock domain crossing support.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item AXI signal assignments and FIFO push/pop logic.
+    \item Clock domain crossing synchronizers.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_axi\_if.sv: AXI4 Interface (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item AXI burst handling and response reordering.
+    \item Backpressure propagation to the NoC.
+    \item Error injection for verification.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Logic for burst-to-packet conversion and response assembly.
+    \item Error detection and handling logic.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_axi\_noc\_bridge.sv: AXI4-NoC Bridge (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item Decomposes AXI bursts into NoC packets.
+    \item Maintains reorder buffer for out-of-order responses.
+    \item Tracks outstanding transactions by ID.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Logic for AXI to NoC packet conversion.
+    \item Reorder buffer management for response assembly.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_axi\_noc\_bridge.sv: AXI4-NoC Bridge (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item Out-of-order response assembly from NoC flits.
+    \item Error detection and reporting for protocol violations.
+    \item Latency monitoring for each transaction.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Logic for assembling responses from NoC flits.
+    \item Error and latency monitoring logic.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_chi\_interface.sv: CHI Protocol (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item Implements CHI request, response, and data channels.
+    \item State machine for protocol sequencing.
+    \item Snoop and directory support.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item CHI protocol state machine implementation.
+    \item Logic for handling CHI requests and responses.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_chi\_interface.sv: CHI Protocol (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item FIFO-based buffering for all CHI channels.
+    \item Protocol error detection and recovery.
+    \item Integration with directory and snoop logic.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Buffer management logic for CHI channels.
+    \item Error handling and recovery logic.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_chi\_noc\_bridge.sv: CHI-NoC Bridge (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item Maps CHI message types to NoC VCs.
+    \item Handles coherency, snoop, and directory state transitions.
+    \item Aggregates snoop responses and manages timeouts.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Logic for mapping CHI messages to NoC virtual channels.
+    \item Snoop response aggregation and timeout handling logic.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_chi\_noc\_bridge.sv: CHI-NoC Bridge (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item Timeout detection for snoop responses.
+    \item Priority mapping for CHI traffic classes.
+    \item Error handling for protocol mismatches.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Timeout detection and handling logic.
+    \item Priority encoding logic for CHI messages.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_chi\_directory.sv: Directory Controller (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item Implements MOESI directory for cache coherency.
+    \item Handles snoop requests and state transitions.
+    \item Manages race conditions and protocol corner cases.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Directory state machine implementation for MOESI.
+    \item Logic for handling snoop requests and responses.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_chi\_directory.sv: Directory Controller (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item MOESI state machine for each cache line.
+    \item Snoop response aggregation and forwarding.
+    \item Error detection for invalid state transitions.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item State transition logic for MOESI protocol.
+    \item Logic for aggregating and forwarding snoop responses.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_niu\_axi.sv: AXI NIU (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item Buffers and arbitrates between protocol and NoC domains.
+    \item Handles packetization and depacketization.
+    \item Manages local error and status reporting.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Logic for buffering and arbitration between AXI and NoC.
+    \item Packetization and depacketization logic.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_niu\_axi.sv: AXI NIU (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item Local error detection and reporting.
+    \item Arbitration between multiple protocol sources.
+    \item Parameterized for different AXI widths.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_packet\_assembler.sv: Packet Assembly (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item Converts protocol transactions to NoC flit packets.
+    \item Segments payloads across multiple flits.
+    \item Generates flit headers with CRC and sequence info.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Header construction logic for different packet types.
+    \item Payload segmentation and CRC generation logic.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_packet\_assembler.sv: Packet Assembly (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item Address-to-coordinate mapping for mesh routing.
+    \item CRC generation for each packet.
+    \item Handles both single-flit and multi-flit packets.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_packet\_disassembler.sv: Packet Disassembly (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item Reconstructs protocol transactions from flits.
+    \item Verifies CRC and sequence numbers.
+    \item Handles out-of-order and multi-path delivery.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Logic for reassembling transactions from received flits.
+    \item CRC verification and error handling logic.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_packet\_disassembler.sv: Packet Disassembly (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item Out-of-order packet reassembly.
+    \item Error flagging for CRC mismatches.
+    \item Sequence number tracking for reliability.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_pkg.sv: Global Package (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item Centralizes all parameter, type, and enum definitions.
+    \item Ensures consistency across all modules.
+    \item Provides utility functions for coordinate mapping, CRC, etc.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Parameter and type definitions for NoC and protocol.
+    \item Utility function implementations (e.g., CRC calculation).
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_pkg.sv: Global Package (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item Parameterized mesh and flit widths.
+    \item Strong type safety for protocol and NoC structures.
+    \item Utility functions for address/coordinate conversion.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_top\_simple.sv: Minimal Top (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item Minimal mesh and protocol integration for bring-up.
+    \item Used for unit and smoke tests.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Minimal mesh instantiation and AXI interface.
+    \item Basic configuration and status logic.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{nebula\_top\_simple.sv: Minimal Top (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item Fast simulation for basic connectivity checks.
+    \item Easy to extend for new protocol bridges.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{common/: Reusable Modules (1/2)}
+  \textbf{Design Decisions:}
+  \begin{itemize}
+    \item Implements core NoC utilities: CRC, FIFO, credit flow, arbitration.
+    \item Parameterized for width, depth, and protocol.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item CRC calculation function and FIFO module.
+    \item Credit flow control and round-robin arbiter.
+  \end{itemize}
+\end{frame}
+
+%-------------------------------------------------
+\begin{frame}{common/: Reusable Modules (2/2)}
+  \textbf{Cool Features:}
+  \begin{itemize}
+    \item Round-robin arbitration for fairness.
+    \item Parameterized FIFO for flit/packet buffering.
+    \item Modular, reusable code for all NoC blocks.
+  \end{itemize}
+  \textbf{Key Code:}
+  \begin{itemize}
+    \item Generic FIFO read/write logic.
+    \item Arbiter grant and request handling.
+  \end{itemize}
 \end{frame}
 
 \end{document}
