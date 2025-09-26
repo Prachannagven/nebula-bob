@@ -14,12 +14,7 @@ const state = {
   lastMeshUpdate: 0,
   meshUpdateThrottle: 100, // ms - limit mesh updates to 10fps
   animatedPackets: [],
-  performanceHistory: {
-    utilization: [],
-    congestion: [],
-    temperature: [],
-    throughput: [],
-  },
+  // performanceHistory removed
   lastUpdateTime: Date.now(),
 };
 
@@ -65,19 +60,15 @@ function initializeWebSocket() {
     const now = Date.now();
     if (now - state.lastMeshUpdate > state.meshUpdateThrottle) {
       updateMeshVisualization();
-      updatePerformanceMetrics();
+  // updatePerformanceMetrics removed
       state.lastMeshUpdate = now;
     }
   });
 
   state.socket.on("performance_update", (data) => {
     if (data.history) {
-      updatePerformanceHistory(data.history);
-    }
-    if (data.current) {
-      updateCurrentPerformanceMetrics(data.current);
-    }
-    updateVcdReplayProgress(data.vcd_progress || 0);
+  // updatePerformanceHistory and updateCurrentPerformanceMetrics removed
+  updateVcdReplayProgress(data.vcd_progress || 0);
   });
 
   state.socket.on("status_update", (data) => {
@@ -1158,59 +1149,9 @@ function getActivePackets() {
 }
 
 // Performance metrics
-function updatePerformanceMetrics() {
-  // Get active packets (VCD or simulation)
-  const activePackets = getActivePackets();
-  const routers = state.meshData.routers || [];
+// updatePerformanceMetrics removed
 
-  // Remove legacy packet count update - now handled by status updates
-
-  // Calculate metrics only if routers exist
-  if (routers.length > 0) {
-    // Remove legacy utilization, congestion, and temperature calculations
-    // These stats were removed from the UI
-  } else {
-    // Remove legacy default values
-  }
-
-  // Update VCD metrics if VCD data is loaded
-  updateVcdMetrics();
-
-  // Update router stats
-  updateRouterStats(routers);
-}
-
-function updateVcdMetrics() {
-  // Update VCD event count in performance metrics
-  const vcdEventCountEl = document.getElementById("vcdEventsTotal");
-  if (vcdEventCountEl) {
-    vcdEventCountEl.textContent = state.vcdEvents?.length || 0;
-  }
-
-  // Update current VCD replay position
-  const vcdProgressEl = document.getElementById("vcdProgress");
-  if (vcdProgressEl) {
-    if (state.vcdEvents?.length > 0) {
-      const progress = (
-        ((state.vcdReplayIndex + 1) / state.vcdEvents.length) *
-        100
-      ).toFixed(1);
-      vcdProgressEl.textContent = `${progress}%`;
-    } else {
-      vcdProgressEl.textContent = "0%";
-    }
-  }
-
-  // Update max event index input
-  const jumpInput = document.getElementById("jumpToEvent");
-  if (jumpInput && state.vcdEvents?.length > 0) {
-    jumpInput.max = state.vcdEvents.length - 1;
-    jumpInput.placeholder = `0-${state.vcdEvents.length - 1}`;
-  }
-
-  // Update performance history and charts
-  updatePerformanceCharts();
-}
+// updateVcdMetrics removed
 
 function updatePerformanceCharts() {
   const routers = state.meshData.routers || [];
@@ -1264,92 +1205,9 @@ function updatePerformanceCharts() {
   );
 }
 
-function drawChart(canvasId, data, color, label) {
-  const canvas = document.getElementById(canvasId);
-  if (!canvas || data.length === 0) return;
+// updatePerformanceCharts removed
 
-  const ctx = canvas.getContext("2d");
-  const width = canvas.width;
-  const height = canvas.height;
-
-  // Clear canvas
-  ctx.clearRect(0, 0, width, height);
-
-  // Set up drawing
-  ctx.strokeStyle = color;
-  ctx.fillStyle = color + "20"; // Semi-transparent fill
-  ctx.lineWidth = 2;
-
-  // Find min/max for scaling
-  const min = Math.min(...data);
-  const max = Math.max(...data, min + 0.1); // Ensure some range
-  const range = max - min;
-
-  // Draw background grid
-  ctx.strokeStyle = "#e5e7eb";
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= 4; i++) {
-    const y = (height * i) / 4;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(width, y);
-    ctx.stroke();
-  }
-
-  // Draw data line
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-
-  const stepX = width / (data.length - 1 || 1);
-
-  data.forEach((value, index) => {
-    const x = index * stepX;
-    const y = height - ((value - min) / range) * height;
-
-    if (index === 0) {
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-    }
-  });
-
-  ctx.stroke();
-
-  // Fill area under curve
-  if (data.length > 1) {
-    ctx.fillStyle = color + "20";
-    ctx.lineTo(width, height);
-    ctx.lineTo(0, height);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // Draw current value
-  ctx.fillStyle = color;
-  ctx.font = "12px sans-serif";
-  ctx.textAlign = "right";
-  const currentValue = data[data.length - 1] || 0;
-  ctx.fillText(`${currentValue.toFixed(2)}`, width - 5, 15);
-}
-
-function updateRouterStats(routers) {
-  const container = document.getElementById("routerStats");
-  container.innerHTML = "";
-
-  routers.slice(0, 8).forEach((router) => {
-    // Show first 8 routers
-    const statDiv = document.createElement("div");
-    statDiv.className = "flex justify-between items-center text-sm";
-    statDiv.innerHTML = `
-            <span class="font-medium">R${router.id}</span>
-            <span class="text-gray-600">${(router.utilization * 100).toFixed(
-              0
-            )}%</span>
-        `;
-    container.appendChild(statDiv);
-  });
-}
+// updateRouterStats removed
 
 // Simulation log updates
 async function updateSimulationLog() {
@@ -1466,88 +1324,9 @@ setInterval(() => {
 }, 10000); // Reduced to every 10 seconds and no VCD refresh
 
 // New performance update functions for real-time updates
-function updatePerformanceHistory(historyData) {
-  if (!historyData || !Array.isArray(historyData)) return;
+// updatePerformanceHistory removed
 
-  // Store the history data for charting
-  const newHistory = {
-    utilization: [],
-    congestion: [],
-    temperature: [],
-    throughput: [],
-  };
-
-  historyData.forEach((point) => {
-    newHistory.utilization.push(point.avg_utilization || 0);
-    newHistory.congestion.push(point.max_congestion || 0);
-    newHistory.throughput.push(point.total_packets || 0);
-    newHistory.temperature.push(25.0); // Default temperature
-  });
-
-  // Update state with new history
-  Object.assign(state.performanceHistory, newHistory);
-
-  // Redraw performance charts
-  if (state.performanceHistory.utilization.length > 0) {
-    drawChart(
-      "utilizationChart",
-      state.performanceHistory.utilization,
-      "#10b981",
-      "Utilization"
-    );
-    drawChart(
-      "congestionChart",
-      state.performanceHistory.congestion,
-      "#ef4444",
-      "Congestion"
-    );
-    drawChart(
-      "packetChart",
-      state.performanceHistory.throughput,
-      "#3b82f6",
-      "Packets"
-    );
-  }
-}
-
-function updateCurrentPerformanceMetrics(currentData) {
-  if (!currentData) return;
-
-  // Update current performance display
-  const elements = {
-    totalPackets: document.getElementById("totalPackets"),
-    activePackets: document.getElementById("activePackets"),
-    completedPackets: document.getElementById("completedPackets"),
-    avgLatency: document.getElementById("avgLatency"),
-    throughput: document.getElementById("throughput"),
-    meshUtilization: document.getElementById("meshUtilization"),
-  };
-
-  if (elements.totalPackets) {
-    elements.totalPackets.textContent = currentData.total_packets || 0;
-  }
-  if (elements.activePackets) {
-    elements.activePackets.textContent = currentData.active_packets || 0;
-  }
-  if (elements.completedPackets) {
-    elements.completedPackets.textContent = currentData.completed_packets || 0;
-  }
-  if (elements.avgLatency) {
-    elements.avgLatency.textContent = `${(currentData.avg_latency || 0).toFixed(
-      2
-    )}ns`;
-  }
-  if (elements.throughput) {
-    elements.throughput.textContent = `${(currentData.throughput || 0).toFixed(
-      2
-    )} pkt/s`;
-  }
-  if (elements.meshUtilization) {
-    elements.meshUtilization.textContent = `${(
-      (currentData.avg_utilization || 0) * 100
-    ).toFixed(1)}%`;
-  }
-}
+// updateCurrentPerformanceMetrics removed
 
 function updateVcdReplayProgress(progress) {
   const progressBar = document.getElementById("vcdReplayProgressBar");
