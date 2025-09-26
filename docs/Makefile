@@ -1,8 +1,10 @@
 # Makefile for building and cleaning LaTeX Beamer presentations
 
-PDF= presentation.pdf
-TEX= presentation.tex
-AUXFILES= *.aux *.log *.nav *.out *.snm *.toc *.vrb *.fdb_latexmk *.fls
+# Use FILE variable; default to 'presentation' if not provided
+FILE ?= presentation
+PDF = $(FILE).pdf
+TEX = $(FILE).tex
+AUXFILES = *.aux *.log *.nav *.out *.snm *.toc *.vrb *.fdb_latexmk *.fls
 
 all: $(PDF)
 
