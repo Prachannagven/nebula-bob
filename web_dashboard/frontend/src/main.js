@@ -69,6 +69,7 @@ function initializeWebSocket() {
     if (data.history) {
   // updatePerformanceHistory and updateCurrentPerformanceMetrics removed
   updateVcdReplayProgress(data.vcd_progress || 0);
+    }
   });
 
   state.socket.on("status_update", (data) => {
@@ -1148,7 +1149,7 @@ function getActivePackets() {
   return state.meshData.packets || [];
 }
 
-// Performance metrics
+// Performance
 // updatePerformanceMetrics removed
 
 // updateVcdMetrics removed

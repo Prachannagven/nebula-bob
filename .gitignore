@@ -50,6 +50,7 @@ latexmkrc
 .venv
 
 # Hardware simulation and synthesis files
+*.vcd
 *.fsdb
 *.shm
 *.trn
