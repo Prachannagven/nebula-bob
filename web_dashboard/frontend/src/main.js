@@ -14,7 +14,12 @@ const state = {
   lastMeshUpdate: 0,
   meshUpdateThrottle: 100, // ms - limit mesh updates to 10fps
   animatedPackets: [],
-  // performanceHistory removed
+  performanceHistory: {
+    utilization: [],
+    congestion: [],
+    temperature: [],
+    throughput: [],
+  },
   lastUpdateTime: Date.now(),
 };
 
@@ -60,16 +65,19 @@ function initializeWebSocket() {
     const now = Date.now();
     if (now - state.lastMeshUpdate > state.meshUpdateThrottle) {
       updateMeshVisualization();
-  // updatePerformanceMetrics removed
+      updatePerformanceMetrics();
       state.lastMeshUpdate = now;
     }
   });
 
   state.socket.on("performance_update", (data) => {
     if (data.history) {
-  // updatePerformanceHistory and updateCurrentPerformanceMetrics removed
-  updateVcdReplayProgress(data.vcd_progress || 0);
+      updatePerformanceHistory(data.history);
     }
+    if (data.current) {
+      updateCurrentPerformanceMetrics(data.current);
+    }
+    updateVcdReplayProgress(data.vcd_progress || 0);
   });
 
   state.socket.on("status_update", (data) => {
@@ -1149,145 +1157,6 @@ function getActivePackets() {
   return state.meshData.packets || [];
 }
 
-// Performance
-// updatePerformanceMetrics removed
-
-// updateVcdMetrics removed
-
-function updatePerformanceCharts() {
-  const routers = state.meshData.routers || [];
-
-  if (routers.length === 0) return;
-
-  // Calculate current metrics from router data
-  const avgUtilization =
-    routers.reduce((sum, r) => sum + (r.utilization || 0), 0) / routers.length;
-  const maxCongestion = Math.max(
-    ...routers.map((r) => r.congestion_level || 0)
-  );
-
-  // Use actual active packet count from backend status instead of calculating locally
-  // This is set via updateDashboardStatus when status_update events arrive
-  const activePacketsEl = document.getElementById("activePackets");
-  const activePacketCount = activePacketsEl
-    ? parseInt(activePacketsEl.textContent)
-    : 0;
-
-  // Add to history (keep last 200 points for better time span)
-  const maxHistory = 200;
-  state.performanceHistory.utilization.push(avgUtilization);
-  state.performanceHistory.congestion.push(maxCongestion);
-  state.performanceHistory.throughput.push(activePacketCount);
-
-  if (state.performanceHistory.utilization.length > maxHistory) {
-    state.performanceHistory.utilization.shift();
-    state.performanceHistory.congestion.shift();
-    state.performanceHistory.throughput.shift();
-  }
-
-  // Draw charts
-  drawChart(
-    "utilizationChart",
-    state.performanceHistory.utilization,
-    "#10b981",
-    "Utilization"
-  );
-  drawChart(
-    "congestionChart",
-    state.performanceHistory.congestion,
-    "#ef4444",
-    "Congestion"
-  );
-  drawChart(
-    "packetChart",
-    state.performanceHistory.throughput,
-    "#3b82f6",
-    "Packets"
-  );
-}
-
-// updatePerformanceCharts removed
-
-// updateRouterStats removed
-
-// Simulation log updates
-async function updateSimulationLog() {
-  try {
-    const response = await fetch("/api/simulation/log");
-    const data = await response.json();
-
-    const logContainer = document.getElementById("simulationLog");
-    logContainer.innerHTML = "";
-
-    data.log.forEach((entry) => {
-      const logEntry = document.createElement("div");
-      logEntry.textContent = entry;
-      logEntry.className = "mb-1";
-      logContainer.appendChild(logEntry);
-    });
-
-    logContainer.scrollTop = logContainer.scrollHeight;
-  } catch (error) {
-    console.error("Error fetching simulation log:", error);
-  }
-}
-
-// Real-time log updates via WebSocket
-function appendToSimulationLog(logEntries) {
-  const logContainer = document.getElementById("simulationLog");
-
-  logEntries.forEach((entry) => {
-    const logEntry = document.createElement("div");
-    logEntry.textContent = entry;
-    logEntry.className = "mb-1";
-
-    // Add color coding based on content
-    if (
-      entry.includes("❌") ||
-      entry.includes("Error") ||
-      entry.includes("failed")
-    ) {
-      logEntry.className += " text-red-600";
-    } else if (
-      entry.includes("✅") ||
-      entry.includes("completed") ||
-      entry.includes("success")
-    ) {
-      logEntry.className += " text-green-600";
-    } else if (
-      entry.includes("⚠️") ||
-      entry.includes("Warning") ||
-      entry.includes("timeout")
-    ) {
-      logEntry.className += " text-yellow-600";
-    } else if (
-      entry.includes("🔧") ||
-      entry.includes("🔨") ||
-      entry.includes("verilating") ||
-      entry.includes("compiling")
-    ) {
-      logEntry.className += " text-blue-600";
-    }
-
-    logContainer.appendChild(logEntry);
-  });
-
-  // Auto-scroll to bottom
-  logContainer.scrollTop = logContainer.scrollHeight;
-
-  // Keep only last 100 entries for performance
-  while (logContainer.children.length > 100) {
-    logContainer.removeChild(logContainer.firstChild);
-  }
-}
-
-// Periodic updates
-setInterval(() => {
-  if (state.simulationRunning) {
-    updateSimulationLog();
-  }
-}, 2000);
-
 // Reduced frequency updates - only fetch status/mesh data, not VCD files
 setInterval(() => {
   try {
@@ -1325,9 +1194,88 @@ setInterval(() => {
 }, 10000); // Reduced to every 10 seconds and no VCD refresh
 
 // New performance update functions for real-time updates
-// updatePerformanceHistory removed
+function updatePerformanceHistory(historyData) {
+  if (!historyData || !Array.isArray(historyData)) return;
 
-// updateCurrentPerformanceMetrics removed
+  // Store the history data for charting
+  const newHistory = {
+    utilization: [],
+    congestion: [],
+    temperature: [],
+    throughput: [],
+  };
+
+  historyData.forEach((point) => {
+    newHistory.utilization.push(point.avg_utilization || 0);
+    newHistory.congestion.push(point.max_congestion || 0);
+    newHistory.throughput.push(point.total_packets || 0);
+    newHistory.temperature.push(25.0); // Default temperature
+  });
+
+  // Update state with new history
+  Object.assign(state.performanceHistory, newHistory);
+
+  // Redraw performance charts
+  if (state.performanceHistory.utilization.length > 0) {
+    drawChart(
+      "utilizationChart",
+      state.performanceHistory.utilization,
+      "#10b981",
+      "Utilization"
+    );
+    drawChart(
+      "congestionChart",
+      state.performanceHistory.congestion,
+      "#ef4444",
+      "Congestion"
+    );
+    drawChart(
+      "packetChart",
+      state.performanceHistory.throughput,
+      "#3b82f6",
+      "Packets"
+    );
+  }
+}
+
+function updateCurrentPerformanceMetrics(currentData) {
+  if (!currentData) return;
+
+  // Update current performance display
+  const elements = {
+    totalPackets: document.getElementById("totalPackets"),
+    activePackets: document.getElementById("activePackets"),
+    completedPackets: document.getElementById("completedPackets"),
+    avgLatency: document.getElementById("avgLatency"),
+    throughput: document.getElementById("throughput"),
+    meshUtilization: document.getElementById("meshUtilization"),
+  };
+
+  if (elements.totalPackets) {
+    elements.totalPackets.textContent = currentData.total_packets || 0;
+  }
+  if (elements.activePackets) {
+    elements.activePackets.textContent = currentData.active_packets || 0;
+  }
+  if (elements.completedPackets) {
+    elements.completedPackets.textContent = currentData.completed_packets || 0;
+  }
+  if (elements.avgLatency) {
+    elements.avgLatency.textContent = `${(currentData.avg_latency || 0).toFixed(
+      2
+    )}ns`;
+  }
+  if (elements.throughput) {
+    elements.throughput.textContent = `${(currentData.throughput || 0).toFixed(
+      2
+    )} pkt/s`;
+  }
+  if (elements.meshUtilization) {
+    elements.meshUtilization.textContent = `${(
+      (currentData.avg_utilization || 0) * 100
+    ).toFixed(1)}%`;
+  }
+}
 
 function updateVcdReplayProgress(progress) {
   const progressBar = document.getElementById("vcdReplayProgressBar");

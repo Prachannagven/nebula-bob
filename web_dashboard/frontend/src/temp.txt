@@ -1,0 +1,206 @@
+
+            <!-- Performance Metrics -->
+            <div
+              class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 transition-all duration-300"
+            >
+              <h2
+                class="text-lg font-semibold mb-6 text-gray-900 dark:text-gray-100"
+              >
+                Performance Metrics
+              </h2>
+              <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Total Packets
+                  </h3>
+                  <div
+                    id="totalPackets"
+                    class="text-2xl font-bold text-blue-600 dark:text-blue-400"
+                  >
+                    0
+                  </div>
+                </div>
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Active Packets
+                  </h3>
+                  <div
+                    id="activePackets"
+                    class="text-2xl font-bold text-green-600 dark:text-green-400"
+                  >
+                    0
+                  </div>
+                </div>
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Completed Packets
+                  </h3>
+                  <div
+                    id="completedPackets"
+                    class="text-2xl font-bold text-green-600 dark:text-green-400"
+                  >
+                    0
+                  </div>
+                </div>
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Avg Latency
+                  </h3>
+                  <div
+                    id="avgLatency"
+                    class="text-2xl font-bold text-orange-600 dark:text-orange-400"
+                  >
+                    0ns
+                  </div>
+                </div>
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Throughput
+                  </h3>
+                  <div
+                    id="throughput"
+                    class="text-2xl font-bold text-cyan-600 dark:text-cyan-400"
+                  >
+                    0 pkt/s
+                  </div>
+                </div>
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Mesh Utilization
+                  </h3>
+                  <div
+                    id="meshUtilization"
+                    class="text-2xl font-bold text-red-600 dark:text-red-400"
+                  >
+                    0%
+                  </div>
+                </div>
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Active Packets
+                  </h3>
+                  <div
+                    id="activePackets"
+                    class="text-2xl font-bold text-blue-600 dark:text-blue-400"
+                  >
+                    0
+                  </div>
+                </div>
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Completed Packets
+                  </h3>
+                  <div
+                    id="completedPackets"
+                    class="text-2xl font-bold text-green-600 dark:text-green-400"
+                  >
+                    0
+                  </div>
+                </div>
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    Total Packets
+                  </h3>
+                  <div
+                    id="totalPackets"
+                    class="text-2xl font-bold text-purple-600 dark:text-purple-400"
+                  >
+                    0
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Performance Graphs -->
+            <div
+              class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 transition-all duration-300"
+            >
+              <h2
+                class="text-lg font-semibold mb-6 text-gray-900 dark:text-gray-100"
+              >
+                Performance Graphs
+              </h2>
+              <div class="space-y-6">
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
+                  >
+                    Network Utilization Over Time
+                  </h3>
+                  <canvas
+                    id="utilizationChart"
+                    width="800"
+                    height="300"
+                    class="w-full"
+                  ></canvas>
+                </div>
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
+                  >
+                    Congestion Level
+                  </h3>
+                  <canvas
+                    id="congestionChart"
+                    width="800"
+                    height="300"
+                    class="w-full"
+                  ></canvas>
+                </div>
+                <div
+                  class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+                >
+                  <h3
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3"
+                  >
+                    Active Packets
+                  </h3>
+                  <canvas
+                    id="packetChart"
+                    width="800"
+                    height="300"
+                    class="w-full"
+                  ></canvas>
+                </div>
+              </div>
+            </div>

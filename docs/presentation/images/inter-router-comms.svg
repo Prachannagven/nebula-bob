@@ -10,7 +10,7 @@
    inkscape:export-filename="inter-router-comms.png"
    inkscape:export-xdpi="96"
    inkscape:export-ydpi="96"
-   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
    sodipodi:docname="inter-router-comms.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -27,13 +27,13 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="1.6819304"
-     inkscape:cx="380.51515"
-     inkscape:cy="241.98385"
+     inkscape:zoom="2.3786088"
+     inkscape:cx="341.37602"
+     inkscape:cy="227.44387"
      inkscape:window-width="1920"
-     inkscape:window-height="1094"
-     inkscape:window-x="-11"
-     inkscape:window-y="-11"
+     inkscape:window-height="1092"
+     inkscape:window-x="0"
+     inkscape:window-y="66"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1" />
   <defs
@@ -63,98 +63,192 @@
      inkscape:groupmode="layer"
      id="layer1">
     <g
-       id="g3650">
+       id="g12342"
+       transform="matrix(0.55180613,0,0,0.55180613,3.008552,18.695352)">
       <rect
-         style="fill:none;stroke:#1976d2;stroke-width:0.187045;stroke-dasharray:none;stroke-opacity:1"
-         id="rect12344"
-         width="48.231724"
-         height="7.7880554"
-         x="108.8248"
-         y="41.532269" />
+         style="fill:none;stroke:#1976d2;stroke-width:0.338968;stroke-dasharray:none;stroke-opacity:1"
+         id="rect788"
+         width="87.407013"
+         height="14.113753"
+         x="51.058826"
+         y="41.385761" />
       <text
          xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Dutch801 Rm BT';-inkscape-font-specification:'Dutch801 Rm BT, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#393939;fill-opacity:1;stroke:none;stroke-width:2.20722;stroke-dasharray:none;stroke-opacity:1"
-         x="125.77521"
-         y="47.522671"
+         style="font-size:25.4px;fill:#393939;fill-opacity:1;stroke:none;stroke-width:4;stroke-dasharray:none;stroke-opacity:1"
+         x="86.303932"
+         y="51.282776"
+         id="text844"><tspan
+           sodipodi:role="line"
+           id="tspan842"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.46667px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#393939;fill-opacity:1;stroke:none;stroke-width:4;stroke-opacity:1"
+           x="86.303932"
+           y="51.282776">GPU</tspan></text>
+      <rect
+         style="fill:none;stroke:#1976d2;stroke-width:0.339264;stroke-dasharray:none;stroke-opacity:1"
+         id="rect1004"
+         width="43.693275"
+         height="28.364822"
+         x="51.135487"
+         y="55.471416" />
+      <rect
+         style="fill:none;stroke:#1976d2;stroke-width:0.339512;stroke-dasharray:none;stroke-opacity:1"
+         id="rect1006"
+         width="43.695419"
+         height="28.369108"
+         x="94.770416"
+         y="55.469273" />
+      <text
+         xml:space="preserve"
+         style="font-size:12.7px;white-space:pre;inline-size:65.1455;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
+         x="24.666525"
+         y="151.30228"
+         id="text1010"
+         transform="matrix(0.5,0,0,0.5,47.942213,-11.905052)"><tspan
+           x="24.666525"
+           y="151.30228"
+           id="tspan13498"><tspan
+             style="font-size:11.2889px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
+             id="tspan13496">Network </tspan></tspan><tspan
+           x="24.666525"
+           y="167.18581"
+           id="tspan13502"><tspan
+             style="font-size:11.2889px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
+             id="tspan13500">Interface </tspan></tspan><tspan
+           x="24.666525"
+           y="183.06934"
+           id="tspan13506"><tspan
+             style="font-size:11.2889px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
+             id="tspan13504">Controller</tspan></tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-size:12.7px;white-space:pre;inline-size:54.912;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
+         x="24.666525"
+         y="151.30228"
+         id="text1014"
+         transform="matrix(0.5,0,0,0.5,91.567191,-8.1202047)"><tspan
+           x="24.666525"
+           y="151.30228"
+           id="tspan13510"><tspan
+             style="font-size:11.2889px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
+             id="tspan13508">Memory </tspan></tspan><tspan
+           x="24.666525"
+           y="167.18581"
+           id="tspan13514"><tspan
+             style="font-size:11.2889px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
+             id="tspan13512">Controller</tspan></tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-size:12.7px;white-space:pre;inline-size:98.2934;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
+         x="24.666525"
+         y="151.30228"
+         id="text1010-3"
+         transform="matrix(0.5,0,0,0.5,69.74701,17.9858)"><tspan
+           x="24.666525"
+           y="151.30228"
+           id="tspan13518"><tspan
+             style="font-size:16.9333px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
+             id="tspan13516">Router</tspan></tspan></text>
+      <rect
+         style="fill:none;stroke:#1976d2;stroke-width:0.338819;stroke-dasharray:none;stroke-opacity:1"
+         id="rect572"
+         width="87.330353"
+         height="14.113753"
+         x="51.135487"
+         y="83.808144" />
+    </g>
+    <g
+       id="g12370"
+       transform="matrix(0.55180613,0,0,0.55180613,80.650225,18.695352)">
+      <rect
+         style="fill:none;stroke:#1976d2;stroke-width:0.338968;stroke-dasharray:none;stroke-opacity:1"
+         id="rect12344"
+         width="87.407013"
+         height="14.113753"
+         x="51.058826"
+         y="41.385761" />
+      <text
+         xml:space="preserve"
+         style="font-size:25.4px;fill:#393939;fill-opacity:1;stroke:none;stroke-width:4;stroke-dasharray:none;stroke-opacity:1"
+         x="86.303932"
+         y="51.282776"
          id="text12348"><tspan
            sodipodi:role="line"
            id="tspan12346"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Dutch801 Rm BT';-inkscape-font-specification:'Dutch801 Rm BT, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#393939;fill-opacity:1;stroke:none;stroke-width:2.20722;stroke-opacity:1"
-           x="125.77521"
-           y="47.522671">GPU</tspan></text>
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.46667px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#393939;fill-opacity:1;stroke:none;stroke-width:4;stroke-opacity:1"
+           x="86.303932"
+           y="51.282776">GPU</tspan></text>
       <rect
-         style="fill:none;stroke:#1976d2;stroke-width:0.187208;stroke-dasharray:none;stroke-opacity:1"
+         style="fill:none;stroke:#1976d2;stroke-width:0.339264;stroke-dasharray:none;stroke-opacity:1"
          id="rect12350"
-         width="24.110218"
-         height="15.651883"
-         x="108.8671"
-         y="49.304821" />
+         width="43.693275"
+         height="28.364822"
+         x="51.135487"
+         y="55.471416" />
       <rect
-         style="fill:none;stroke:#1976d2;stroke-width:0.187345;stroke-dasharray:none;stroke-opacity:1"
+         style="fill:none;stroke:#1976d2;stroke-width:0.339512;stroke-dasharray:none;stroke-opacity:1"
          id="rect12352"
-         width="24.111401"
-         height="15.654248"
-         x="132.94511"
-         y="49.303638" />
+         width="43.695419"
+         height="28.369108"
+         x="94.770416"
+         y="55.469273" />
       <text
          xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.7px;font-family:'Dutch801 Rm BT';-inkscape-font-specification:'Dutch801 Rm BT, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;inline-size:65.1455;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
+         style="font-size:12.7px;white-space:pre;inline-size:65.1455;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
          x="24.666525"
          y="151.30228"
          id="text12356"
-         transform="matrix(0.27590307,0,0,0.27590307,107.10503,12.126071)"><tspan
+         transform="matrix(0.5,0,0,0.5,47.942213,-11.905052)"><tspan
            x="24.666525"
            y="151.30228"
-           id="tspan3878"><tspan
-             style="stroke:none"
-             id="tspan3876">Network </tspan></tspan><tspan
+           id="tspan13522"><tspan
+             style="font-size:11.2889px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
+             id="tspan13520">Network </tspan></tspan><tspan
            x="24.666525"
-           y="167.17727"
-           id="tspan3882"><tspan
-             style="stroke:none"
-             id="tspan3880">Interface </tspan></tspan><tspan
+           y="167.18581"
+           id="tspan13526"><tspan
+             style="font-size:11.2889px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
+             id="tspan13524">Interface </tspan></tspan><tspan
            x="24.666525"
-           y="183.05227"
-           id="tspan3886"><tspan
-             style="stroke:none"
-             id="tspan3884">Controller</tspan></tspan></text>
+           y="183.06934"
+           id="tspan13530"><tspan
+             style="font-size:11.2889px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
+             id="tspan13528">Controller</tspan></tspan></text>
       <text
          xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.7px;font-family:'Dutch801 Rm BT';-inkscape-font-specification:'Dutch801 Rm BT, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;inline-size:54.912;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
+         style="font-size:12.7px;white-space:pre;inline-size:54.912;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
          x="24.666525"
          y="151.30228"
          id="text12360"
-         transform="matrix(0.27590307,0,0,0.27590307,131.7666,16.186711)"><tspan
+         transform="matrix(0.5,0,0,0.5,91.567191,-8.1202047)"><tspan
            x="24.666525"
            y="151.30228"
-           id="tspan3890"><tspan
-             style="stroke:none"
-             id="tspan3888">Memory </tspan></tspan><tspan
+           id="tspan13534"><tspan
+             style="font-size:11.2889px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
+             id="tspan13532">Memory </tspan></tspan><tspan
            x="24.666525"
-           y="100011.24"
-           id="tspan3894"><tspan
-             dx="0 8.9916992 6.9205074 6.957716 4.1423817 4.8617191 6.9205093 3.454052 3.454052 6.2755852"
-             style="stroke:none"
-             id="tspan3892">Controller</tspan></tspan></text>
+           y="167.18581"
+           id="tspan13538"><tspan
+             style="font-size:11.2889px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
+             id="tspan13536">Controller</tspan></tspan></text>
       <text
          xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.7px;font-family:'Dutch801 Rm BT';-inkscape-font-specification:'Dutch801 Rm BT, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;inline-size:98.2934;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
+         style="font-size:12.7px;white-space:pre;inline-size:98.2934;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
          x="24.666525"
          y="151.30228"
          id="text12366"
-         transform="matrix(0.27590307,0,0,0.27590307,120.35118,28.276135)"><tspan
+         transform="matrix(0.5,0,0,0.5,69.74701,17.9858)"><tspan
            x="24.666525"
            y="151.30228"
-           id="tspan3898"><tspan
-             style="stroke:none"
-             id="tspan3896">Router</tspan></tspan></text>
+           id="tspan13542"><tspan
+             style="font-size:16.9333px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
+             id="tspan13540">Router</tspan></tspan></text>
       <rect
-         style="fill:none;stroke:#1976d2;stroke-width:0.186962;stroke-dasharray:none;stroke-opacity:1"
+         style="fill:none;stroke:#1976d2;stroke-width:0.338819;stroke-dasharray:none;stroke-opacity:1"
          id="rect12368"
-         width="48.189423"
-         height="7.7880554"
-         x="108.8671"
-         y="64.9412" />
+         width="87.330353"
+         height="14.113753"
+         x="51.135487"
+         y="83.808144" />
     </g>
     <path
        style="fill:#d250af;stroke:#d250af;stroke-width:0.4;stroke-dasharray:none;marker-start:url(#Arrow5);marker-end:url(#Arrow5)"
@@ -163,145 +257,15 @@
        sodipodi:nodetypes="cc" />
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;font-family:'Dutch801 Rm BT';-inkscape-font-specification:'Dutch801 Rm BT, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;inline-size:22.7421;display:inline;fill:#d250af;stroke:none;stroke-width:0.4;stroke-dasharray:none"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.93889px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;inline-size:18.2833;fill:#d250af;stroke:none;stroke-width:0.4;stroke-dasharray:none"
        x="82.075439"
        y="66.844566"
        id="text12872"
-       transform="translate(1.9222077,6.1790051)"><tspan
+       transform="translate(4.0495668,5.9326946)"><tspan
          x="82.075439"
          y="66.844566"
-         id="tspan3900">NOC Packets</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.52778px;font-family:'Dutch801 Rm BT';-inkscape-font-specification:'Dutch801 Rm BT, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;inline-size:18.2833;display:inline;fill:#d250af;stroke:none;stroke-width:0.4;stroke-dasharray:none"
-       x="82.075439"
-       y="66.844566"
-       id="text1431"
-       transform="translate(8.8072375,0.85238903)"><tspan
-         x="82.075439"
-         y="66.844566"
-         id="tspan3902">AXI</tspan></text>
-    <path
-       style="opacity:1;fill:none;fill-opacity:1;stroke:#d250af;stroke-width:0.4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker-start:url(#Arrow5);marker-end:url(#Arrow5)"
-       d="m 55.320138,74.813605 v 15.796563 h 77.641672 l 0.0278,-15.796563"
-       id="path3112"
-       sodipodi:nodetypes="cccc" />
-    <rect
-       style="opacity:1;fill:#ffffff;fill-opacity:1;stroke:#1976d2;stroke-width:0.187;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
-       id="rect3327"
-       width="29.302834"
-       height="15.597838"
-       x="79.489555"
-       y="83.011253" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:3.52778px;font-family:'Dutch801 Rm BT';-inkscape-font-specification:'Dutch801 Rm BT, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:center;text-anchor:middle;white-space:pre;inline-size:29.3643;display:inline;opacity:1;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.187;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
-       x="95.101929"
-       y="89.273041"
-       id="text3627"
-       transform="translate(-1.0027912,0.32771317)"><tspan
-         x="95.101929"
-         y="89.273041"
-         id="tspan3904">CHI Directory &amp;<tspan
-   y="89.273041"
-   id="tspan3906"> </tspan></tspan><tspan
-         x="95.101929"
-         y="93.682767"
-         id="tspan3908">Mem Controller</tspan></text>
-    <g
-       id="g3694"
-       transform="translate(-77.354988)">
-      <rect
-         style="fill:none;stroke:#1976d2;stroke-width:0.187045;stroke-dasharray:none;stroke-opacity:1"
-         id="rect3652"
-         width="48.231724"
-         height="7.7880554"
-         x="108.8248"
-         y="41.532269" />
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Dutch801 Rm BT';-inkscape-font-specification:'Dutch801 Rm BT, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#393939;fill-opacity:1;stroke:none;stroke-width:2.20722;stroke-dasharray:none;stroke-opacity:1"
-         x="125.77521"
-         y="47.522671"
-         id="text3656"><tspan
-           sodipodi:role="line"
-           id="tspan3654"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Dutch801 Rm BT';-inkscape-font-specification:'Dutch801 Rm BT, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#393939;fill-opacity:1;stroke:none;stroke-width:2.20722;stroke-opacity:1"
-           x="125.77521"
-           y="47.522671">GPU</tspan></text>
-      <rect
-         style="fill:none;stroke:#1976d2;stroke-width:0.187208;stroke-dasharray:none;stroke-opacity:1"
-         id="rect3658"
-         width="24.110218"
-         height="15.651883"
-         x="108.8671"
-         y="49.304821" />
-      <rect
-         style="fill:none;stroke:#1976d2;stroke-width:0.187345;stroke-dasharray:none;stroke-opacity:1"
-         id="rect3660"
-         width="24.111401"
-         height="15.654248"
-         x="132.94511"
-         y="49.303638" />
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.7px;font-family:'Dutch801 Rm BT';-inkscape-font-specification:'Dutch801 Rm BT, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;inline-size:65.1455;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
-         x="24.666525"
-         y="151.30228"
-         id="text3674"
-         transform="matrix(0.27590307,0,0,0.27590307,107.10503,12.126071)"><tspan
-           x="24.666525"
-           y="151.30228"
-           id="tspan3912"><tspan
-             style="stroke:none"
-             id="tspan3910">Network </tspan></tspan><tspan
-           x="24.666525"
-           y="167.17727"
-           id="tspan3916"><tspan
-             style="stroke:none"
-             id="tspan3914">Interface </tspan></tspan><tspan
-           x="24.666525"
-           y="183.05227"
-           id="tspan3920"><tspan
-             style="stroke:none"
-             id="tspan3918">Controller</tspan></tspan></text>
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.7px;font-family:'Dutch801 Rm BT';-inkscape-font-specification:'Dutch801 Rm BT, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;inline-size:54.912;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
-         x="24.666525"
-         y="151.30228"
-         id="text3684"
-         transform="matrix(0.27590307,0,0,0.27590307,131.7666,16.186711)"><tspan
-           x="24.666525"
-           y="151.30228"
-           id="tspan3924"><tspan
-             style="stroke:none"
-             id="tspan3922">Memory </tspan></tspan><tspan
-           x="24.666525"
-           y="100011.24"
-           id="tspan3928"><tspan
-             dx="0 8.9916992 6.9205074 6.957716 4.1423817 4.8617191 6.9205093 3.454052 3.454052 6.2755852"
-             style="stroke:none"
-             id="tspan3926">Controller</tspan></tspan></text>
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.7px;font-family:'Dutch801 Rm BT';-inkscape-font-specification:'Dutch801 Rm BT, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;white-space:pre;inline-size:98.2934;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
-         x="24.666525"
-         y="151.30228"
-         id="text3690"
-         transform="matrix(0.27590307,0,0,0.27590307,120.35118,28.276135)"><tspan
-           x="24.666525"
-           y="151.30228"
-           id="tspan3932"><tspan
-             style="stroke:none"
-             id="tspan3930">Router</tspan></tspan></text>
-      <rect
-         style="fill:none;stroke:#1976d2;stroke-width:0.186962;stroke-dasharray:none;stroke-opacity:1"
-         id="rect3692"
-         width="48.189423"
-         height="7.7880554"
-         x="108.8671"
-         y="64.9412" />
-    </g>
+         id="tspan13546"><tspan
+           style="font-size:2.82222px"
+           id="tspan13544">NOC Packets</tspan></tspan></text>
   </g>
 </svg>

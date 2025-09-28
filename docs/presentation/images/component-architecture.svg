@@ -7,9 +7,9 @@
    viewBox="0 0 210 297"
    version="1.1"
    id="svg5"
-   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
    sodipodi:docname="component-architecture.svg"
-   inkscape:export-filename="component-architecture.png"
+   inkscape:export-filename="images/component-architecture.png"
    inkscape:export-xdpi="96"
    inkscape:export-ydpi="96"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -28,12 +28,12 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="1.1893044"
-     inkscape:cx="295.1305"
-     inkscape:cy="504.49658"
+     inkscape:cx="349.78429"
+     inkscape:cy="617.16748"
      inkscape:window-width="1920"
-     inkscape:window-height="1094"
-     inkscape:window-x="-11"
-     inkscape:window-y="-11"
+     inkscape:window-height="1092"
+     inkscape:window-x="0"
+     inkscape:window-y="66"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1" />
   <defs
@@ -71,15 +71,15 @@
        y="106.95847" />
     <text
        xml:space="preserve"
-       style="font-size:25.4px;fill:#393939;fill-opacity:1;stroke:none;stroke-width:4;stroke-dasharray:none;stroke-opacity:1"
-       x="49.883881"
-       y="117.08493"
+       style="font-size:25.4px;fill:#393939;stroke:none;stroke-width:4;stroke-dasharray:none;stroke-opacity:1;fill-opacity:1"
+       x="77.267326"
+       y="116.85548"
        id="text844"><tspan
          sodipodi:role="line"
          id="tspan842"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.46667px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#393939;fill-opacity:1;stroke:none;stroke-width:4;stroke-opacity:1"
-         x="49.883881"
-         y="117.08493">GPU</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.46667px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#393939;stroke:none;stroke-width:4;stroke-opacity:1;fill-opacity:1"
+         x="77.267326"
+         y="116.85548">GPU</tspan></text>
     <rect
        style="fill:none;stroke:#1976d2;stroke-width:0.4;stroke-dasharray:none;stroke-opacity:1"
        id="rect1004"
@@ -96,43 +96,43 @@
        y="137.93852" />
     <text
        xml:space="preserve"
-       style="font-size:12.7px;white-space:pre;inline-size:79.8475;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
+       style="font-size:12.7px;white-space:pre;inline-size:98.2934;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
        x="24.666525"
        y="151.30228"
        id="text1010"
        transform="matrix(0.5,0,0,0.5,20.490331,70.164741)"><tspan
          x="24.666525"
          y="151.30228"
-         id="tspan3973"><tspan
+         id="tspan13405"><tspan
            style="font-size:14.1111px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
-           id="tspan3971">Network </tspan></tspan><tspan
+           id="tspan13403">Network </tspan></tspan><tspan
          x="24.666525"
          y="168.94115"
-         id="tspan3977"><tspan
+         id="tspan13409"><tspan
            style="font-size:14.1111px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
-           id="tspan3975">Interface </tspan></tspan><tspan
+           id="tspan13407">Interface </tspan></tspan><tspan
          x="24.666525"
          y="186.58002"
-         id="tspan3981"><tspan
+         id="tspan13413"><tspan
            style="font-size:14.1111px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
-           id="tspan3979">Unit</tspan></tspan></text>
+           id="tspan13411">Controller</tspan></tspan></text>
     <text
        xml:space="preserve"
-       style="font-size:12.7px;white-space:pre;inline-size:70.9297;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
+       style="font-size:12.7px;white-space:pre;inline-size:98.2934;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
        x="24.666525"
        y="151.30228"
        id="text1014"
-       transform="matrix(0.5,0,0,0.5,95.699182,74.775129)"><tspan
+       transform="matrix(0.5,0,0,0.5,94.236578,74.341915)"><tspan
          x="24.666525"
          y="151.30228"
-         id="tspan3985"><tspan
-           style="stroke:none"
-           id="tspan3983">CHI </tspan></tspan><tspan
+         id="tspan13417"><tspan
+           style="font-size:14.1111px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
+           id="tspan13415">Memory </tspan></tspan><tspan
          x="24.666525"
-         y="167.17728"
-         id="tspan3989"><tspan
-           style="stroke:none"
-           id="tspan3987">Interface</tspan></tspan></text>
+         y="168.94115"
+         id="tspan13421"><tspan
+           style="font-size:14.1111px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
+           id="tspan13419">Controller</tspan></tspan></text>
     <text
        xml:space="preserve"
        style="font-size:12.7px;white-space:pre;inline-size:98.2934;display:inline;fill:#393939;fill-opacity:1;stroke:#000000;stroke-width:2;stroke-dasharray:none"
@@ -142,9 +142,9 @@
        transform="matrix(0.5,0,0,0.5,60.672078,117.29087)"><tspan
          x="24.666525"
          y="151.30228"
-         id="tspan3993"><tspan
+         id="tspan13425"><tspan
            style="font-size:16.9333px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';stroke:none"
-           id="tspan3991">Router</tspan></tspan></text>
+           id="tspan13423">Router</tspan></tspan></text>
     <rect
        style="fill:none;stroke:#1976d2;stroke-width:0.4;stroke-dasharray:none;stroke-opacity:1"
        id="rect572"
@@ -153,69 +153,46 @@
        x="24.867424"
        y="183.11345" />
     <path
-       style="fill:#000000;stroke:#616161;stroke-width:0.499999;stroke-opacity:1;marker-start:url(#Arrow5);marker-end:url(#Arrow5)"
-       d="M 48.70694,181.02157 V 168.05471"
+       style="fill:#000000;stroke:#616161;stroke-width:0.499999;marker-start:url(#Arrow5);marker-end:url(#Arrow5);stroke-opacity:1"
+       d="M 48.70694,136.13097 V 123.16411"
        id="path654"
        sodipodi:nodetypes="cc" />
     <path
-       style="fill:#000000;stroke:#616161;stroke-width:0.499999;stroke-opacity:1;marker-start:url(#Arrow5);marker-end:url(#Arrow5)"
-       d="M 122.46697,181.02157 V 168.05471"
+       style="fill:#000000;stroke:#616161;stroke-width:0.499999;marker-start:url(#Arrow5);marker-end:url(#Arrow5);stroke-opacity:1"
+       d="M 122.46697,136.13097 V 123.16411"
        id="path1555"
        sodipodi:nodetypes="cc" />
-    <g
-       id="g1077"
-       transform="translate(0,-45.059414)">
-      <path
-         style="fill:#000000;stroke:#d250af;stroke-width:0.499999;stroke-opacity:1;marker-start:url(#Arrow5);marker-end:url(#Arrow5)"
-         d="M 122.46697,181.02157 V 168.05471"
-         id="path1571"
-         sodipodi:nodetypes="cc" />
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#d250af;fill-opacity:1;stroke:#000000;stroke-width:0.4;stroke-dasharray:none"
-         x="124.17496"
-         y="176.66824"
-         id="text1599"><tspan
-           sodipodi:role="line"
-           id="tspan1597"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#d250af;fill-opacity:1;stroke:none;stroke-width:0.4"
-           x="124.17496"
-           y="176.66824">CHI</tspan></text>
-    </g>
-    <g
-       id="g327"
-       transform="translate(0,-45.059414)">
-      <path
-         style="fill:#000000;stroke:#d250af;stroke-width:0.499999;stroke-opacity:1;marker-start:url(#Arrow5);marker-end:url(#Arrow5)"
-         d="M 48.70694,181.02157 V 168.05471"
-         id="path1569"
-         sodipodi:nodetypes="cc" />
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#d250af;fill-opacity:1;stroke:#000000;stroke-width:0.4;stroke-dasharray:none"
-         x="9.2025452"
-         y="176.32127"
-         id="text1603"><tspan
-           sodipodi:role="line"
-           id="tspan1601"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#d250af;fill-opacity:1;stroke:none;stroke-width:0.4"
-           x="9.2025452"
-           y="176.32127">AXI4 Bridge</tspan></text>
-    </g>
     <path
-       style="opacity:0.416031;fill:#000000;stroke-width:0.499999;stroke:#000000;stroke-dasharray:0.49999899,0.99999797;stroke-dashoffset:0"
-       d="m 98.226551,121.13707 v -14.1786"
-       id="path435" />
+       style="fill:#000000;stroke:#d250af;stroke-width:0.499999;marker-start:url(#Arrow5);marker-end:url(#Arrow5);stroke-opacity:1"
+       d="M 48.70694,181.02157 V 168.05471"
+       id="path1569"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:#000000;stroke:#d250af;stroke-width:0.499999;marker-start:url(#Arrow5);marker-end:url(#Arrow5);stroke-opacity:1"
+       d="M 122.46697,181.02157 V 168.05471"
+       id="path1571"
+       sodipodi:nodetypes="cc" />
     <text
        xml:space="preserve"
-       style="font-size:25.4px;fill:#393939;fill-opacity:1;stroke:none;stroke-width:4;stroke-dasharray:none;stroke-opacity:1"
-       x="113.66337"
-       y="117.11735"
-       id="text844-0"><tspan
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#d250af;stroke:#000000;stroke-width:0.4;stroke-dasharray:none;fill-opacity:1"
+       x="124.17496"
+       y="176.66824"
+       id="text1599"><tspan
          sodipodi:role="line"
-         id="tspan842-8"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.46667px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#393939;fill-opacity:1;stroke:none;stroke-width:4;stroke-opacity:1"
-         x="113.66337"
-         y="117.11735">MEM</tspan></text>
+         id="tspan1597"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;stroke:none;stroke-width:0.4;fill:#d250af;fill-opacity:1"
+         x="124.17496"
+         y="176.66824">CHI</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#d250af;stroke:#000000;stroke-width:0.4;stroke-dasharray:none;fill-opacity:1"
+       x="50.359306"
+       y="176.66824"
+       id="text1603"><tspan
+         sodipodi:role="line"
+         id="tspan1601"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.35px;font-family:'Charis SIL';-inkscape-font-specification:'Charis SIL, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;stroke:none;stroke-width:0.4;fill:#d250af;fill-opacity:1"
+         x="50.359306"
+         y="176.66824">AXI4</tspan></text>
   </g>
 </svg>
